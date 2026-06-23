@@ -38,8 +38,8 @@ sequenceDiagram
     C->>A: POST /engine/request (service: P2P, phone, amount)
     A->>E: processRequestStep()
     E->>D: Đọc Service, TransField, TransValidation
-    E->>E: Dựng TRANSBODY, tra cứu SENDERID & RECEIVERID
-    E->>E: Validate định dạng & nghiệp vụ, tính phí
+    E->>E: Dựng TRANSBODY, tra cứu SENDERID và RECEIVERID
+    E->>E: Validate định dạng và nghiệp vụ, tính phí
     E->>D: Khởi tạo TransactionTrail (status: pending)
     E-->>A: Preview (transRefId, số tiền, phí, tổng cộng)
     A-->>C: Hiển thị Preview giao dịch
@@ -58,12 +58,12 @@ sequenceDiagram
     E->>D: Khoá Pocket người gửi (inProgress)
     E->>E: Verify mã PIN hợp lệ
     E->>D: Bắt đầu DB Transaction (ACID)
-    E->>D: Tính lại phí & chạy glSteps ($inc balance)
-    E->>D: Tính lại Checksum ví gửi & nhận
-    E->>D: Ghi PocketEntry & Transaction
+    E->>D: Tính lại phí và chạy glSteps ($inc balance)
+    E->>D: Tính lại Checksum ví gửi và nhận
+    E->>D: Ghi PocketEntry và Transaction
     E->>D: Update Trail status = done
-    E->>D: Commit DB Transaction & Mở khoá Pocket
-    E-->>A: Transaction data (Biên lai)
+    E->>D: Commit DB Transaction và mở khoá Pocket
+    E-->>A: Transaction data
     A-->>C: Hiển thị giao dịch thành công
 ```
 
@@ -91,14 +91,14 @@ sequenceDiagram
 
     %% VERIFY (BỎ QUA CONFIRM)
     A->>E: processVerifyStep(transRefId)
-    E->>D: Khoá Ví Bank (inProgress)
+    E->>D: Khoá ví bank (inProgress)
     E->>E: Bỏ qua kiểm tra PIN (auth = NONE)
     E->>D: Bắt đầu DB Transaction (ACID)
-    E->>D: Chạy glStep: Trừ Ví Bank, Cộng Ví Khách
+    E->>D: Chạy glStep: trừ ví bank, cộng ví khách
     E->>D: Tính lại Checksum hai ví
-    E->>D: Ghi PocketEntry & Transaction
+    E->>D: Ghi PocketEntry và Transaction
     E->>D: Update Trail status = done
-    E->>D: Commit DB Transaction & Mở khoá Ví Bank
+    E->>D: Commit DB Transaction và mở khoá ví bank
     E-->>A: Transaction data
     A-->>O: Nạp tiền thành công
 ```
@@ -147,9 +147,9 @@ sequenceDiagram
 
     %% LEDGER
     E->>D: Bắt đầu DB Transaction (ACID)
-    E->>D: Chạy glSteps: Trừ ví Khách, Cộng ví Biller & System
+    E->>D: Chạy glSteps: trừ ví Khách, cộng ví Biller và System
     E->>D: Tính Checksum, ghi PocketEntry, Transaction
-    E->>D: Commit DB Transaction & Mở khoá Pocket
+    E->>D: Commit DB Transaction và mở khoá Pocket
     E-->>A: Transaction data
     A-->>C: Thanh toán hoá đơn thành công
 ```

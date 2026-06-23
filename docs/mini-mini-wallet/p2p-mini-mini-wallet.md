@@ -35,7 +35,7 @@ sequenceDiagram
         API->>DB: insert Transaction (fromPocket, toPocket, amount, SUCCESS)
         DB-->>API: transactionId
 
-        API->>DB: Commit transaction & đóng session
+        API->>DB: Commit transaction và đóng session
         API-->>Client: 200 OK { transactionId, currentBalance }
     end
 ```
