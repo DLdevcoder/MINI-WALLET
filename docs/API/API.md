@@ -31,7 +31,7 @@
 
 ## 4. Nhóm Quản trị (Admin / Officer)
 
-### 4.1. Cấu hình & Đối tác (CRUD Config & Biller)
+### 4.1. CRUD Config & Biller
 
 Nhóm API phục vụ màn hình Transaction Design và Quản lý Biller.
 
@@ -45,7 +45,7 @@ Nhóm API phục vụ màn hình Transaction Design và Quản lý Biller.
 
 ---
 
-### 4.2. Vận hành (Operations)
+### 4.2. Operations
 
 | HTTP Method | Endpoint         | Đầu vào (Body/Query)  | Đầu ra (Data)      | Mục đích                                                                                                           |
 | ----------- | ---------------- | --------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------ |
