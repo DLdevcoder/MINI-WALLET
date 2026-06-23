@@ -2,4 +2,6 @@
 
 Các tài liệu về gói thiết kế nằm trong thư mục docs:
 
-- Tài liệu về ERD + data dictionary: docs/ERD & Data Dictionary.md, docs/ERD.png
+- Task ngày 23/06(thứ 3): docs/mini-mini-wallet
+
+- Tài liệu về ERD + data dictionary: docs/ERD & Data Dictionary
