@@ -7,3 +7,5 @@ Các tài liệu về gói thiết kế nằm trong thư mục docs:
 - Tài liệu về ERD + data dictionary: docs/ERD & Data Dictionary
 
 - Tài liệu về API: docs/API
+
+- Tài liệu về config: docs/ config
