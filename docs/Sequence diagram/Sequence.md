@@ -64,7 +64,7 @@ sequenceDiagram
         Note over E,D: session.withTransaction() bắt đầu
         E->>D: START DB TRANSACTION
         loop Qua từng step trong glSteps (Bỏ qua nếu amount = 0)
-            E->>D: Trừ ví nguồn và Cộng ví đích (native $inc: { balance })
+            E->>D: Trừ ví nguồn và cộng ví đích (native $inc: { balance })
             E->>E: Tính lại Hash Checksum cho cả 2 ví
             E->>D: Lưu Checksum mới vào 2 ví
             E->>D: Tạo PocketEntry (transRefId, stepOrder, debit, credit, amount)
@@ -108,7 +108,7 @@ sequenceDiagram
     rect rgba(120, 120, 120, 0.15)
         Note over E,D: session.withTransaction() bắt đầu
         E->>D: START DB TRANSACTION
-        E->>D: Chạy glStep: Trừ Ví Bank, Cộng Ví Khách (native $inc: { balance })
+        E->>D: Chạy glStep: Trừ Ví Bank, cộng Ví Khách (native $inc: { balance })
         E->>E: Tính lại Hash Checksum cho cả 2 ví
         E->>D: Cập nhật Checksum
         E->>D: Ghi PocketEntry và Transaction
@@ -162,7 +162,7 @@ sequenceDiagram
         Note over E,D: session.withTransaction() bắt đầu
         E->>D: START DB TRANSACTION
         loop Qua từng step trong glSteps
-            E->>D: Trừ ví Khách, Cộng ví Biller và System ($inc balance)
+            E->>D: Trừ ví Khách, cộng ví Biller và System ($inc balance)
             E->>E: Cập nhật Hash Checksum
             E->>D: Ghi PocketEntry
         end
