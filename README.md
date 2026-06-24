@@ -8,4 +8,6 @@ Các tài liệu về gói thiết kế nằm trong thư mục docs:
 
 - Tài liệu về API: docs/API
 
-- Tài liệu về config: docs/ config
+- Tài liệu về config: docs/ Config
+
+- Tài liệu về wireframes: docs/ Wireframes
