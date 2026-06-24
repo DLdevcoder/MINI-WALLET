@@ -22,7 +22,7 @@ Hệ thống được chia thành 3 cụm mô hình dữ liệu chính:
 
 ---
 
-# 2. Sơ đồ tuần tự: Chuyển tiền P2P
+# 2. Chuyển tiền P2P
 
 Đây là luồng chuẩn 3 bước đi từ khách hàng. Nguồn tiền là ví Customer, đích là ví Customer.
 
@@ -69,7 +69,7 @@ sequenceDiagram
 
 ---
 
-# 3. Sơ đồ tuần tự: Cash-in (Medium)
+# 3. Cash-in
 
 Nghiệp vụ do Officer thực hiện. Server tự động chạy nối tiếp Request và Verify, bỏ qua Confirm vì Officer không cần xác thực PIN (`auth: NONE`). Nguồn tiền cố định từ ví bank.
 
@@ -105,7 +105,7 @@ sequenceDiagram
 
 ---
 
-# 4. Sơ đồ tuần tự: Thanh toán hoá đơn / Bill Payment (High)
+# 4. Bill Payment
 
 Đặc thù: Số tiền không do người dùng nhập mà tra cứu từ hệ thống ngoài . Phải gọi sang đối tác để xác nhận thanh toán trước khi ghi sổ.
 

@@ -1,0 +1,79 @@
+{
+  "Service": {
+    "code": "CASH_IN",
+    "name": "Nạp tiền vào ví",
+    "action": "none",
+    "fee": { "type": "fixed", "value": 0, "max": 0 },
+    "auth": { "method": "NONE" },
+    "amountFormula": "AMOUNT",
+    "fieldBuilder": [
+      {
+        "order": 1,
+        "name": "CURRENCY",
+        "rule": "fixed",
+        "datatype": "string",
+        "variable": "VND"
+      },
+      {
+        "order": 2,
+        "name": "SENDERID",
+        "rule": "fixed",
+        "datatype": "string",
+        "variable": "BANK_POCKET_ID"
+      },
+      {
+        "order": 3,
+        "name": "RECEIVERPHONE",
+        "rule": "mapping",
+        "datatype": "string",
+        "source": "parameters.receiverPhone"
+      },
+      {
+        "order": 4,
+        "name": "AMOUNT",
+        "rule": "mapping",
+        "datatype": "number",
+        "source": "parameters.amount"
+      },
+      {
+        "order": 5,
+        "name": "RECEIVERID",
+        "rule": "query",
+        "datatype": "string",
+        "query": "queryPocketByPhone(RECEIVERPHONE).id"
+      }
+    ]
+  },
+  "TransField": [
+    {
+      "fieldName": "SERVICEID",
+      "fieldFormat": "string",
+      "isRequired": true,
+      "order": 1
+    },
+    {
+      "fieldName": "RECEIVERPHONE",
+      "fieldFormat": "string",
+      "regex": "^[0-9]{10}$",
+      "isRequired": true,
+      "order": 2
+    },
+    {
+      "fieldName": "AMOUNT",
+      "fieldFormat": "number",
+      "isRequired": true,
+      "order": 3
+    }
+  ],
+  "TransValidation": [],
+  "TransDefinition": {
+    "glSteps": [
+      {
+        "order": 1,
+        "amount": "AMOUNT",
+        "debit": { "level": "wallet", "target": "BANK_POCKET_ID" },
+        "credit": { "level": "productLevel", "target": "RECEIVERID" }
+      }
+    ]
+  }
+}
