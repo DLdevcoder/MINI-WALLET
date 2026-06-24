@@ -1,0 +1,90 @@
+{
+  "Service": {
+    "code": "BILL_PAYMENT",
+    "name": "Thanh toán hoá đơn",
+    "action": "billerTrans",
+    "fee": { "type": "fixed", "value": 2000, "max": 0 },
+    "auth": { "method": "PIN" },
+    "amountFormula": "AMOUNT",
+    "fieldBuilder": [
+      {
+        "order": 1,
+        "name": "CURRENCY",
+        "rule": "fixed",
+        "datatype": "string",
+        "variable": "VND"
+      },
+      {
+        "order": 2,
+        "name": "BILLERID",
+        "rule": "mapping",
+        "datatype": "string",
+        "source": "parameters.billerId"
+      },
+      {
+        "order": 3,
+        "name": "BILLCODE",
+        "rule": "mapping",
+        "datatype": "string",
+        "source": "parameters.billCode"
+      },
+      {
+        "order": 4,
+        "name": "SENDERID",
+        "rule": "query",
+        "datatype": "string",
+        "query": "queryPocketByUserId(USERID).id"
+      },
+      {
+        "order": 5,
+        "name": "RECEIVERID",
+        "rule": "query",
+        "datatype": "string",
+        "query": "queryPocketByBillerId(BILLERID).id"
+      }
+    ]
+  },
+  "TransField": [
+    {
+      "fieldName": "SERVICEID",
+      "fieldFormat": "string",
+      "isRequired": true,
+      "order": 1
+    },
+    {
+      "fieldName": "BILLERID",
+      "fieldFormat": "string",
+      "isRequired": true,
+      "order": 2
+    },
+    {
+      "fieldName": "BILLCODE",
+      "fieldFormat": "string",
+      "isRequired": true,
+      "order": 3
+    }
+  ],
+  "TransValidation": [
+    {
+      "validateFunc": "validateSenderAccountSufficiency",
+      "validateFields": "SENDERID:AMOUNT:DEBITFEE",
+      "order": 1
+    }
+  ],
+  "TransDefinition": {
+    "glSteps": [
+      {
+        "order": 1,
+        "amount": "AMOUNT",
+        "debit": { "level": "productLevel", "target": "SENDERID" },
+        "credit": { "level": "productLevel", "target": "RECEIVERID" }
+      },
+      {
+        "order": 2,
+        "amount": "DEBITFEE",
+        "debit": { "level": "productLevel", "target": "SENDERID" },
+        "credit": { "level": "wallet", "target": "SYSTEM_POCKET_ID" }
+      }
+    ]
+  }
+}
