@@ -35,7 +35,7 @@ sequenceDiagram
     participant D as Database
 
     %% BƯỚC 1: REQUEST
-    Note over E,D: === BƯỚC 1: REQUEST ===
+    Note over E,D: BƯỚC 1: REQUEST
     C->>A: POST /engine/request (service: P2P, phone, amount)
     A->>E: processRequestStep()
     E->>D: Query lấy toàn bộ Config của serviceCode "P2P"
@@ -57,7 +57,7 @@ sequenceDiagram
     A-->>C: Hiển thị Preview giao dịch
 
     %% BƯỚC 2: CONFIRM
-    Note over E,D: === BƯỚC 2: CONFIRM ===
+    Note over E,D:  BƯỚC 2: CONFIRM
     C->>A: POST /engine/confirm (transRefId)
     A->>E: processConfirmStep()
     E->>D: Nạp lại TransactionTrail
@@ -67,7 +67,7 @@ sequenceDiagram
     A-->>C: Yêu cầu nhập PIN
 
     %% BƯỚC 3: VERIFY
-    Note over E,D: === BƯỚC 3: VERIFY ===
+    Note over E,D:  BƯỚC 3: VERIFY
     C->>A: POST /engine/verify (transRefId, pin)
     A->>E: processVerifyStep()
     E->>D: validateStateAndLock(SENDERPHONE) (Set state='inProgress')
@@ -113,7 +113,7 @@ sequenceDiagram
     O->>A: POST /admin/cash-in (receiverPhone, amount)
 
     %% REQUEST
-    Note over E,D: === ENGINE TỰ CHẠY BƯỚC REQUEST ===
+    Note over E,D:  ENGINE TỰ CHẠY BƯỚC REQUEST
     A->>E: processRequestStep()
     E->>D: Query lấy toàn bộ Config của serviceCode "CASH_IN"
 
@@ -126,7 +126,7 @@ sequenceDiagram
     E->>D: Khởi tạo TransactionTrail (status: pending)
 
     %% VERIFY (BỎ QUA CONFIRM)
-    Note over E,D: === BỎ QUA CONFIRM, CHẠY THẲNG VERIFY ===
+    Note over E,D:  BỎ QUA CONFIRM, CHẠY THẲNG VERIFY
     A->>E: processVerifyStep(transRefId)
     E->>D: validateStateAndLock(BANK_POCKET) (Set state='inProgress')
 
@@ -168,7 +168,7 @@ sequenceDiagram
     participant B as Mock Biller
 
     %% BƯỚC 1: REQUEST & INQUIRY
-    Note over E,D: === BƯỚC 1: REQUEST ===
+    Note over E,D:  BƯỚC 1: REQUEST
     C->>A: POST /engine/request (service: BILL, billerId, billCode)
     A->>E: processRequestStep()
     E->>D: Query lấy toàn bộ Config của serviceCode "BILL"
@@ -191,7 +191,7 @@ sequenceDiagram
     A-->>C: Hiển thị số tiền nợ & yêu cầu tiếp tục
 
     %% BƯỚC 2: CONFIRM
-    Note over E,D: === BƯỚC 2: CONFIRM ===
+    Note over E,D:  BƯỚC 2: CONFIRM
     C->>A: POST /engine/confirm (transRefId)
     A->>E: processConfirmStep()
     E->>D: Nạp lại TransactionTrail
@@ -201,7 +201,7 @@ sequenceDiagram
     A-->>C: Yêu cầu nhập PIN
 
     %% BƯỚC 3: VERIFY
-    Note over E,D: === BƯỚC 3: VERIFY (Thu tiền trước) ===
+    Note over E,D:  BƯỚC 3: VERIFY (Thu tiền trước)
     C->>A: POST /engine/verify (transRefId, pin)
     A->>E: processVerifyStep()
     E->>D: validateStateAndLock(SENDERPHONE)
@@ -224,7 +224,7 @@ sequenceDiagram
     end
 
     %% GỌI PAYMENT SAU KHI ĐÃ THU TIỀN
-    Note over E,B: === GỌI ĐỐI TÁC ===
+    Note over E,B:  GỌI ĐỐI TÁC
     E->>B: POST /payment (transRefId, billCode, amount)
     Note over E,B: Truyền transRefId để Biller nhận diện (Idempotency)
 
