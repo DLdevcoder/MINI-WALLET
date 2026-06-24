@@ -115,10 +115,10 @@ sequenceDiagram
     actor C as Customer
     participant A as API Layer
     participant E as Core Engine
-    participant B as Mock Biller
     participant D as Database
+    participant B as Mock Biller
 
-    %% REQUEST + INQUIRY
+    %% BƯỚC 1: REQUEST & INQUIRY
     C->>A: POST /engine/request (service: BILL, billerId, billCode)
     A->>E: processRequestStep()
     E->>B: GET /inquiry (billCode)
@@ -126,30 +126,40 @@ sequenceDiagram
     E->>E: Ghi đè AMOUNT, tính phí
     E->>D: Khởi tạo TransactionTrail (status: pending)
     E-->>A: Preview (transRefId, amount từ Biller, phí)
-    A-->>C: Hiển thị số tiền nợ
+    A-->>C: Hiển thị số tiền nợ & yêu cầu tiếp tục
 
-    %% CONFIRM
+    %% BƯỚC 2: CONFIRM
     C->>A: POST /engine/confirm (transRefId)
     A->>E: processConfirmStep()
     E-->>A: authMethod: "PIN"
     A-->>C: Yêu cầu nhập PIN
 
-    %% VERIFY + PAYMENT
+    %% BƯỚC 3: VERIFY (THU TIỀN TRƯỚC, GỌI BILLER SAU)
     C->>A: POST /engine/verify (transRefId, pin)
     A->>E: processVerifyStep()
     E->>D: Khoá Pocket người gửi
     E->>E: Verify mã PIN hợp lệ
 
-    %% CALL BILLER
-    E->>B: POST /payment (transRefId, billCode, amount)
-    Note over E,B: Truyền transRefId để đảm bảo idempotency
-    B-->>E: Payment Success
-
-    %% LEDGER
+    %% GHI SỔ KÉP ĐỂ THU TIỀN TRƯỚC
     E->>D: Bắt đầu DB Transaction (ACID)
-    E->>D: Chạy glSteps: trừ ví Khách, cộng ví Biller và System
+    E->>D: Chạy glSteps: Trừ ví Khách, Cộng ví Biller & System
     E->>D: Tính Checksum, ghi PocketEntry, Transaction
-    E->>D: Commit DB Transaction và mở khoá Pocket
-    E-->>A: Transaction data
-    A-->>C: Thanh toán hoá đơn thành công
+    E->>D: Commit DB Transaction (Tiền đã được giữ)
+
+    %% GỌI PAYMENT SAU KHI ĐÃ THU TIỀN
+    E->>B: POST /payment (transRefId, billCode, amount)
+    Note over E,B: Truyền transRefId để Biller nhận diện
+
+    alt Biller trả về Thành công
+        E->>D: Update Trail status = done
+        E->>D: Mở khoá Pocket
+        E-->>A: Trả về kết quả giao dịch
+        A-->>C: Thanh toán hoá đơn thành công
+    else Biller trả về Thất bại / Timeout
+        E->>D: Update Trail status = refund_pending
+        Note over E,D: Đánh dấu cần hoàn tiền (Reversal) do Biller lỗi
+        E->>D: Mở khoá Pocket
+        E-->>A: Trả lỗi "Gạch nợ thất bại, hệ thống sẽ hoàn tiền"
+        A-->>C: Thông báo lỗi
+    end
 ```

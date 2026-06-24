@@ -21,11 +21,11 @@
 
 ## 3. Nhóm Engine 3 Bước (Transaction)
 
-| HTTP Method | Endpoint        | Đầu vào (Body)                    | Đầu ra (Data)                        | Mục đích                                                                                                                     |
-| ----------- | --------------- | --------------------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
-| POST        | /engine/request | serviceCode, parameters           | transRefId, amount, fee, totalAmount | Dựng biến, kiểm tra định dạng, (gọi enquiry nếu là Bill), tính phí, chốt tổng. Đổi trạng thái Trail thành pending            |
-| POST        | /engine/confirm | transRefId, authMethod (PIN/NONE) | flag xác thực                        | Nạp lại Trail từ database, kiểm tra cấu hình xác thực và trả cờ hiệu cho Frontend                                            |
-| POST        | /engine/verify  | transRefId, pin (tuỳ chọn)        | Transaction                          | Khoá ví người gửi, kiểm tra PIN, (gọi payment url nếu là Bill), chạy ghi sổ kép bằng database transaction (ACID), mở khoá ví |
+| HTTP Method | Endpoint        | Đầu vào (Body)                    | Đầu ra (Data)                        | Mục đích                                                                                                                                                                                                                                       |
+| ----------- | --------------- | --------------------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST        | /engine/request | serviceCode, parameters           | transRefId, amount, fee, totalAmount | Dựng biến, kiểm tra định dạng, (gọi enquiry nếu là Bill), tính phí, chốt tổng. Đổi trạng thái Trail thành pending                                                                                                                              |
+| POST        | /engine/confirm | transRefId, authMethod (PIN/NONE) | flag xác thực                        | Nạp lại Trail từ database, kiểm tra cấu hình xác thực và trả cờ hiệu cho Frontend                                                                                                                                                              |
+| POST        | /engine/verify  | transRefId, pin                   | Transaction                          | Khoá ví người gửi, kiểm tra PIN. Thực thi ghi sổ kép bằng database transaction (ACID) để trừ tiền khách hàng. Sau khi thu tiền thành công, gọi payment url của Biller. Mở khoá ví. Nếu Biller lỗi, chuyển trạng thái Trail sang chờ hoàn tiền. |
 
 ---
 
