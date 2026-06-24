@@ -55,19 +55,30 @@ sequenceDiagram
     %% BƯỚC 3: VERIFY
     C->>A: POST /engine/verify (transRefId, pin)
     A->>E: processVerifyStep()
-    E->>D: Khoá Pocket người gửi (inProgress)
-    E->>E: Verify mã PIN hợp lệ
-    E->>D: Bắt đầu DB Transaction (ACID)
-    E->>D: Tính lại phí và chạy glSteps ($inc balance)
-    E->>D: Tính lại Checksum ví gửi và nhận
-    E->>D: Ghi PocketEntry và Transaction
-    E->>D: Update Trail status = done
-    E->>D: Commit DB Transaction và mở khoá Pocket
-    E-->>A: Transaction data
+    E->>D: validateStateAndLock(SENDERPHONE) (Set state='inProgress')
+    E->>E: Kiểm tra lại PIN và validate lại định dạng
+    E->>E: Tính lại phí
+    E->>D: TransValidation (Kiểm tra lại số dư hiện tại của SENDER)
+
+    rect rgba(120, 120, 120, 0.15)
+        Note over E,D: session.withTransaction() bắt đầu
+        E->>D: START DB TRANSACTION
+        loop Qua từng step trong glSteps (Bỏ qua nếu amount = 0)
+            E->>D: Trừ ví nguồn và Cộng ví đích (native $inc: { balance })
+            E->>E: Tính lại Hash Checksum cho cả 2 ví
+            E->>D: Lưu Checksum mới vào 2 ví
+            E->>D: Tạo PocketEntry (transRefId, stepOrder, debit, credit, amount)
+        end
+        E->>D: Tạo Transaction (Biên lai tổng kết)
+        E->>D: Update TransactionTrail (status = 'done')
+        E->>D: COMMIT DB TRANSACTION
+    end
+
+    Note over E,D: Mở khoá ví ở mọi lối ra
+    E->>D: releaseAccount(SENDERPHONE) (Set state='active')
+    E-->>A: Trả về Envelope chứa thông tin Transaction
     A-->>C: Hiển thị giao dịch thành công
 ```
-
----
 
 # 3. Cash-in
 
@@ -91,14 +102,21 @@ sequenceDiagram
 
     %% VERIFY (BỎ QUA CONFIRM)
     A->>E: processVerifyStep(transRefId)
-    E->>D: Khoá ví bank (inProgress)
+    E->>D: validateStateAndLock(BANK_POCKET) (Set state='inProgress')
     E->>E: Bỏ qua kiểm tra PIN (auth = NONE)
-    E->>D: Bắt đầu DB Transaction (ACID)
-    E->>D: Chạy glStep: trừ ví bank, cộng ví khách
-    E->>D: Tính lại Checksum hai ví
-    E->>D: Ghi PocketEntry và Transaction
-    E->>D: Update Trail status = done
-    E->>D: Commit DB Transaction và mở khoá ví bank
+
+    rect rgba(120, 120, 120, 0.15)
+        Note over E,D: session.withTransaction() bắt đầu
+        E->>D: START DB TRANSACTION
+        E->>D: Chạy glStep: Trừ Ví Bank, Cộng Ví Khách (native $inc: { balance })
+        E->>E: Tính lại Hash Checksum cho cả 2 ví
+        E->>D: Cập nhật Checksum
+        E->>D: Ghi PocketEntry và Transaction
+        E->>D: Update Trail status = done
+        E->>D: COMMIT DB TRANSACTION
+    end
+
+    E->>D: releaseAccount(BANK_POCKET) (Set state='active')
     E-->>A: Transaction data
     A-->>O: Nạp tiền thành công
 ```
@@ -134,31 +152,37 @@ sequenceDiagram
     E-->>A: authMethod: "PIN"
     A-->>C: Yêu cầu nhập PIN
 
-    %% BƯỚC 3: VERIFY (THU TIỀN TRƯỚC, GỌI BILLER SAU)
+    %% BƯỚC 3: VERIFY
     C->>A: POST /engine/verify (transRefId, pin)
     A->>E: processVerifyStep()
-    E->>D: Khoá Pocket người gửi
+    E->>D: validateStateAndLock(SENDERPHONE)
     E->>E: Verify mã PIN hợp lệ
 
-    %% GHI SỔ KÉP ĐỂ THU TIỀN TRƯỚC
-    E->>D: Bắt đầu DB Transaction (ACID)
-    E->>D: Chạy glSteps: Trừ ví Khách, Cộng ví Biller & System
-    E->>D: Tính Checksum, ghi PocketEntry, Transaction
-    E->>D: Commit DB Transaction (Tiền đã được giữ)
+    rect rgba(120, 120, 120, 0.15)
+        Note over E,D: session.withTransaction() bắt đầu
+        E->>D: START DB TRANSACTION
+        loop Qua từng step trong glSteps
+            E->>D: Trừ ví Khách, Cộng ví Biller và System ($inc balance)
+            E->>E: Cập nhật Hash Checksum
+            E->>D: Ghi PocketEntry
+        end
+        E->>D: Tạo Transaction
+        E->>D: COMMIT DB TRANSACTION (Tiền đã được thu)
+    end
 
     %% GỌI PAYMENT SAU KHI ĐÃ THU TIỀN
     E->>B: POST /payment (transRefId, billCode, amount)
-    Note over E,B: Truyền transRefId để Biller nhận diện
+    Note over E,B: Truyền transRefId để Biller nhận diện (Idempotency)
 
     alt Biller trả về Thành công
         E->>D: Update Trail status = done
-        E->>D: Mở khoá Pocket
+        E->>D: releaseAccount(SENDERPHONE)
         E-->>A: Trả về kết quả giao dịch
         A-->>C: Thanh toán hoá đơn thành công
     else Biller trả về Thất bại / Timeout
         E->>D: Update Trail status = refund_pending
-        Note over E,D: Đánh dấu cần hoàn tiền (Reversal) do Biller lỗi
-        E->>D: Mở khoá Pocket
+        Note over E,D: Cần hoàn tiền (Reversal) thủ công do Biller lỗi
+        E->>D: releaseAccount(SENDERPHONE)
         E-->>A: Trả lỗi "Gạch nợ thất bại, hệ thống sẽ hoàn tiền"
         A-->>C: Thông báo lỗi
     end
