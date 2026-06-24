@@ -107,7 +107,7 @@ sequenceDiagram
 
 # 4. Bill Payment
 
-Đặc thù: Số tiền không do người dùng nhập mà tra cứu từ hệ thống ngoài . Phải gọi sang đối tác để xác nhận thanh toán trước khi ghi sổ.
+Đặc thù: Số tiền không do người dùng nhập mà tra cứu từ hệ thống ngoài. Phải gọi sang đối tác để xác nhận thanh toán trước khi ghi sổ.
 
 ```mermaid
 sequenceDiagram
