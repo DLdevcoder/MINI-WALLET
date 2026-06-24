@@ -1,0 +1,96 @@
+{
+  "Service": {
+    "code": "P2P_TRANSFER",
+    "name": "Chuyển tiền cá nhân",
+    "action": "none",
+    "fee": { "type": "fixed", "value": 100, "max": 0 },
+    "auth": { "method": "PIN" },
+    "amountFormula": "AMOUNT",
+    "fieldBuilder": [
+      {
+        "order": 1,
+        "name": "CURRENCY",
+        "rule": "fixed",
+        "datatype": "string",
+        "variable": "VND"
+      },
+      {
+        "order": 2,
+        "name": "RECEIVERPHONE",
+        "rule": "mapping",
+        "datatype": "string",
+        "source": "parameters.receiverPhone"
+      },
+      {
+        "order": 3,
+        "name": "AMOUNT",
+        "rule": "mapping",
+        "datatype": "number",
+        "source": "parameters.amount"
+      },
+      {
+        "order": 4,
+        "name": "SENDERID",
+        "rule": "query",
+        "datatype": "string",
+        "query": "queryPocketByUserId(USERID).id"
+      },
+      {
+        "order": 5,
+        "name": "RECEIVERID",
+        "rule": "query",
+        "datatype": "string",
+        "query": "queryPocketByPhone(RECEIVERPHONE).id"
+      }
+    ]
+  },
+  "TransField": [
+    {
+      "fieldName": "SERVICEID",
+      "fieldFormat": "string",
+      "isRequired": true,
+      "order": 1
+    },
+    {
+      "fieldName": "RECEIVERPHONE",
+      "fieldFormat": "string",
+      "regex": "^[0-9]{10}$",
+      "isRequired": true,
+      "order": 2
+    },
+    {
+      "fieldName": "AMOUNT",
+      "fieldFormat": "number",
+      "isRequired": true,
+      "order": 3
+    }
+  ],
+  "TransValidation": [
+    {
+      "validateFunc": "validateReceiverIsNotSender",
+      "validateFields": "SENDERID:RECEIVERID",
+      "order": 1
+    },
+    {
+      "validateFunc": "validateSenderAccountSufficiency",
+      "validateFields": "SENDERID:AMOUNT:DEBITFEE",
+      "order": 2
+    }
+  ],
+  "TransDefinition": {
+    "glSteps": [
+      {
+        "order": 1,
+        "amount": "AMOUNT",
+        "debit": { "level": "productLevel", "target": "SENDERID" },
+        "credit": { "level": "productLevel", "target": "RECEIVERID" }
+      },
+      {
+        "order": 2,
+        "amount": "DEBITFEE",
+        "debit": { "level": "productLevel", "target": "SENDERID" },
+        "credit": { "level": "wallet", "target": "SYSTEM_POCKET_ID" }
+      }
+    ]
+  }
+}
