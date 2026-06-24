@@ -35,35 +35,53 @@ sequenceDiagram
     participant D as Database
 
     %% BƯỚC 1: REQUEST
+    Note over E,D: === BƯỚC 1: REQUEST ===
     C->>A: POST /engine/request (service: P2P, phone, amount)
     A->>E: processRequestStep()
-    E->>D: Đọc Service, TransField, TransValidation
+    E->>D: Query lấy toàn bộ Config của serviceCode "P2P"
+
+    Note over E: 1. Đọc [Service.fieldBuilder]
     E->>E: Dựng TRANSBODY, tra cứu SENDERID và RECEIVERID
-    E->>E: Validate định dạng và nghiệp vụ, tính phí
+
+    Note over E: 2. Đọc [TransField]
+    E->>E: Validate định dạng và cú pháp TRANSBODY
+
+    Note over E: 3. Đọc [Service.fee]
+    E->>E: Tính phí (DEBITFEE) và chốt TOTALAMOUNT
+
+    Note over E: 4. Đọc [TransValidation]
+    E->>E: Chạy luật nghiệp vụ (Kiểm tra số dư, v.v.)
+
     E->>D: Khởi tạo TransactionTrail (status: pending)
     E-->>A: Preview (transRefId, số tiền, phí, tổng cộng)
     A-->>C: Hiển thị Preview giao dịch
 
     %% BƯỚC 2: CONFIRM
+    Note over E,D: === BƯỚC 2: CONFIRM ===
     C->>A: POST /engine/confirm (transRefId)
     A->>E: processConfirmStep()
     E->>D: Nạp lại TransactionTrail
-    E->>E: Đọc cấu hình auth trên Service
+
+    Note over E: 5. Đọc [Service.auth]
     E-->>A: authMethod: "PIN"
     A-->>C: Yêu cầu nhập PIN
 
     %% BƯỚC 3: VERIFY
+    Note over E,D: === BƯỚC 3: VERIFY ===
     C->>A: POST /engine/verify (transRefId, pin)
     A->>E: processVerifyStep()
     E->>D: validateStateAndLock(SENDERPHONE) (Set state='inProgress')
-    E->>E: Kiểm tra lại PIN và validate lại định dạng
-    E->>E: Tính lại phí
-    E->>D: TransValidation (Kiểm tra lại số dư hiện tại của SENDER)
+
+    Note over E: Lặp lại đọc Config: [TransField], [Fee], [TransValidation]
+    E->>E: Kiểm tra lại PIN, validate lại định dạng, tính phí, số dư
 
     rect rgba(120, 120, 120, 0.15)
         Note over E,D: session.withTransaction() bắt đầu
         E->>D: START DB TRANSACTION
+
+        Note over E: 6. Đọc [TransDefinition.glSteps]
         loop Qua từng step trong glSteps (Bỏ qua nếu amount = 0)
+            E->>D: Lấy Debit/Credit Target từ cấu hình
             E->>D: Trừ ví nguồn và cộng ví đích (native $inc: { balance })
             E->>E: Tính lại Hash Checksum cho cả 2 ví
             E->>D: Lưu Checksum mới vào 2 ví
@@ -95,20 +113,33 @@ sequenceDiagram
     O->>A: POST /admin/cash-in (receiverPhone, amount)
 
     %% REQUEST
+    Note over E,D: === ENGINE TỰ CHẠY BƯỚC REQUEST ===
     A->>E: processRequestStep()
-    E->>D: Đọc cấu hình Cash-in (nguồn: Ví Bank)
-    E->>E: Dựng TRANSBODY, tra ID ví khách hàng
+    E->>D: Query lấy toàn bộ Config của serviceCode "CASH_IN"
+
+    Note over E: 1. Đọc [Service.fieldBuilder]
+    E->>E: Dựng TRANSBODY (SENDERID=BANK_POCKET), tra ID ví khách
+
+    Note over E: 2. Đọc [TransField] & 3. Đọc [Service.fee]
+    E->>E: Validate định dạng, xác định phí (0đ)
+
     E->>D: Khởi tạo TransactionTrail (status: pending)
 
     %% VERIFY (BỎ QUA CONFIRM)
+    Note over E,D: === BỎ QUA CONFIRM, CHẠY THẲNG VERIFY ===
     A->>E: processVerifyStep(transRefId)
     E->>D: validateStateAndLock(BANK_POCKET) (Set state='inProgress')
+
+    Note over E: 4. Đọc [Service.auth]
     E->>E: Bỏ qua kiểm tra PIN (auth = NONE)
 
     rect rgba(120, 120, 120, 0.15)
         Note over E,D: session.withTransaction() bắt đầu
         E->>D: START DB TRANSACTION
-        E->>D: Chạy glStep: Trừ Ví Bank, cộng Ví Khách (native $inc: { balance })
+
+        Note over E: 5. Đọc [TransDefinition.glSteps]
+        E->>D: Lấy Target: Trừ Ví Bank, cộng Ví Khách
+        E->>D: Thực thi native $inc: { balance }
         E->>E: Tính lại Hash Checksum cho cả 2 ví
         E->>D: Cập nhật Checksum
         E->>D: Ghi PocketEntry và Transaction
@@ -137,30 +168,52 @@ sequenceDiagram
     participant B as Mock Biller
 
     %% BƯỚC 1: REQUEST & INQUIRY
+    Note over E,D: === BƯỚC 1: REQUEST ===
     C->>A: POST /engine/request (service: BILL, billerId, billCode)
     A->>E: processRequestStep()
+    E->>D: Query lấy toàn bộ Config của serviceCode "BILL"
+
+    Note over E: 1. Đọc [Service.fieldBuilder]
+    E->>E: Dựng TRANSBODY, tra cứu SENDERID và RECEIVERID
+
     E->>B: GET /inquiry (billCode)
     B-->>E: Trả về số tiền hoá đơn (amount)
-    E->>E: Ghi đè AMOUNT, tính phí
+    E->>E: Ghi đè AMOUNT vào TRANSBODY, tính phí
+
+    Note over E: 2. Đọc [TransField] & 3. Đọc [Service.fee]
+    E->>E: Validate cú pháp, tính phí
+
+    Note over E: 4. Đọc [TransValidation]
+    E->>E: Kiểm tra số dư ví Khách hàng
+
     E->>D: Khởi tạo TransactionTrail (status: pending)
     E-->>A: Preview (transRefId, amount từ Biller, phí)
     A-->>C: Hiển thị số tiền nợ & yêu cầu tiếp tục
 
     %% BƯỚC 2: CONFIRM
+    Note over E,D: === BƯỚC 2: CONFIRM ===
     C->>A: POST /engine/confirm (transRefId)
     A->>E: processConfirmStep()
+    E->>D: Nạp lại TransactionTrail
+
+    Note over E: 5. Đọc [Service.auth]
     E-->>A: authMethod: "PIN"
     A-->>C: Yêu cầu nhập PIN
 
     %% BƯỚC 3: VERIFY
+    Note over E,D: === BƯỚC 3: VERIFY (Thu tiền trước) ===
     C->>A: POST /engine/verify (transRefId, pin)
     A->>E: processVerifyStep()
     E->>D: validateStateAndLock(SENDERPHONE)
+
+    Note over E: Đọc lại Config, kiểm tra PIN và Validation
     E->>E: Verify mã PIN hợp lệ
 
     rect rgba(120, 120, 120, 0.15)
         Note over E,D: session.withTransaction() bắt đầu
         E->>D: START DB TRANSACTION
+
+        Note over E: 6. Đọc [TransDefinition.glSteps]
         loop Qua từng step trong glSteps
             E->>D: Trừ ví Khách, cộng ví Biller và System ($inc balance)
             E->>E: Cập nhật Hash Checksum
@@ -171,6 +224,7 @@ sequenceDiagram
     end
 
     %% GỌI PAYMENT SAU KHI ĐÃ THU TIỀN
+    Note over E,B: === GỌI ĐỐI TÁC ===
     E->>B: POST /payment (transRefId, billCode, amount)
     Note over E,B: Truyền transRefId để Biller nhận diện (Idempotency)
 
