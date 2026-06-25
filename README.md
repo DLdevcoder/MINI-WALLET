@@ -11,3 +11,7 @@ Các tài liệu về gói thiết kế nằm trong thư mục docs:
 - Tài liệu về config: docs/ Config
 
 - Tài liệu về wireframes: docs/ Wireframes
+
+- Tài liệu về seed data: docs/ Seed data
+
+- Tài liệu về backlog: docs/ Backlog
