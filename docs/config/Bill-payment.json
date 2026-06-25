@@ -62,6 +62,12 @@
       "fieldFormat": "string",
       "isRequired": true,
       "order": 3
+    },
+    {
+      "fieldName": "AMOUNT",
+      "fieldFormat": "number",
+      "isRequired": true,
+      "order": 4
     }
   ],
   "TransValidation": [
