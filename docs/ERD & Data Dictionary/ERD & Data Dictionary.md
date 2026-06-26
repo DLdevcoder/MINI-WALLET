@@ -120,16 +120,13 @@ Kịch bản ghi sổ kép.
 | service    | String / ObjectId | FK → Service                                                         |
 | glSteps    | Array             | `{ order, amount, debit: {level, target}, credit: {level, target} }` |
 
-> **Ghi chú cho Developer**
+> **Ghi chú**
 >
 > - `level = productLevel`: Tra động từ biến trong `TRANSBODY`.
 > - `level = wallet`: ID ví cố định.
-
-> **Biến ngầm định**
+>-  Các biến như `DEBITFEE`, `TOTALAMOUNT` không cần khai báo trong `fieldBuilder`.
 >
-> Các biến như `DEBITFEE`, `TOTALAMOUNT` không cần khai báo trong `fieldBuilder`.
->
-> Core Engine sẽ tự động tính toán từ `Service.fee` và inject vào `TRANSBODY` để `glSteps` và `TransValidation` sử dụng.
+> - Core Engine sẽ tự động tính toán từ `Service.fee` và inject vào `TRANSBODY` để `glSteps` và `TransValidation` sử dụng.
 
 ---
 

@@ -24,7 +24,7 @@ Hệ thống được chia thành 3 cụm mô hình dữ liệu chính:
 
 # 2. Chuyển tiền P2P
 
-Đây là luồng chuẩn 3 bước đi từ khách hàng. Nguồn tiền là ví Customer, đích là ví Customer.
+Đây là luồng 3 bước đi từ khách hàng. Nguồn tiền là ví Customer, đích là ví Customer.
 
 ```mermaid
 sequenceDiagram
