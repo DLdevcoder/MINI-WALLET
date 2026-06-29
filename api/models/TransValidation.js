@@ -4,8 +4,8 @@ module.exports = {
         service: { model: 'service', required: true },
         validateFunc: { type: 'string', required: true },
         validateFields: { type: 'string', required: true },
-        order: { type: 'number', required: true },
+        order: { type: 'integer', required: true },
         errorCode: { type: 'string' },
-        status: { type: 'string', isIn: ['active', 'inactive'], defaultsTo: 'active' }
+        status: { type: 'string', defaultsTo: 'active' }
     }
 };

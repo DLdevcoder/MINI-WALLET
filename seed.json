@@ -1,0 +1,157 @@
+{
+  "Pockets": [
+    {
+      "id": "SYSTEM_FEE",
+      "clientType": "system",
+      "currency": "VND",
+      "balance": 0,
+      "checksum": "hash_init_0"
+    },
+    {
+      "id": "BANK_POCKET_01",
+      "clientType": "bank",
+      "currency": "VND",
+      "balance": 1000000000,
+      "checksum": "hash_init_1000000000"
+    },
+    {
+      "id": "BILLER_EVN",
+      "clientType": "biller",
+      "currency": "VND",
+      "balance": 0,
+      "checksum": "hash_init_0"
+    }
+  ],
+  "Services": [
+    {
+      "code": "P2P_TRANSFER",
+      "name": "Chuyển tiền nội bộ",
+      "action": "none",
+      "auth": { "method": "PIN" },
+      "fee": { "type": "fixed", "value": 2000 },
+      "fieldBuilder": [
+        {
+          "order": 1,
+          "name": "RECEIVERPHONE",
+          "rule": "mapping",
+          "source": "body.receiverPhone"
+        },
+        {
+          "order": 2,
+          "name": "AMOUNT",
+          "rule": "mapping",
+          "source": "body.amount"
+        },
+        {
+          "order": 3,
+          "name": "SENDERID",
+          "rule": "mapping",
+          "source": "ctx.senderId"
+        },
+        {
+          "order": 4,
+          "name": "RECEIVERID",
+          "rule": "query",
+          "source": "queryPocketByPhone"
+        }
+      ],
+      "transField": [
+        {
+          "fieldName": "AMOUNT",
+          "dataType": "number",
+          "regex": "^[0-9]+$",
+          "isRequired": true
+        },
+        {
+          "fieldName": "RECEIVERPHONE",
+          "dataType": "string",
+          "regex": "^[0-9]{10}$",
+          "isRequired": true
+        }
+      ],
+      "transValidation": [
+        { "funcName": "checkBalance", "fields": "SENDERID:AMOUNT" }
+      ],
+      "glSteps": [
+        {
+          "order": 1,
+          "amount": "AMOUNT",
+          "debitLevel": "productLevel",
+          "debitTarget": "SENDERID",
+          "creditLevel": "productLevel",
+          "creditTarget": "RECEIVERID"
+        },
+        {
+          "order": 2,
+          "amount": "FEE",
+          "debitLevel": "productLevel",
+          "debitTarget": "SENDERID",
+          "creditLevel": "wallet",
+          "creditTarget": "SYSTEM_FEE"
+        }
+      ]
+    },
+    {
+      "code": "BILL_PAYMENT",
+      "name": "Thanh toán hoá đơn",
+      "action": "billerTrans",
+      "auth": { "method": "PIN" },
+      "fee": { "type": "fixed", "value": 1000 },
+      "fieldBuilder": [
+        {
+          "order": 1,
+          "name": "BILLCODE",
+          "rule": "mapping",
+          "source": "body.billCode"
+        },
+        {
+          "order": 2,
+          "name": "SENDERID",
+          "rule": "mapping",
+          "source": "ctx.senderId"
+        },
+        {
+          "order": 3,
+          "name": "RECEIVERID",
+          "rule": "fixed",
+          "source": "BILLER_EVN"
+        }
+      ],
+      "transField": [
+        {
+          "fieldName": "BILLCODE",
+          "dataType": "string",
+          "regex": "^[a-zA-Z0-9]+$",
+          "isRequired": true
+        },
+        {
+          "fieldName": "AMOUNT",
+          "dataType": "number",
+          "regex": "^[0-9]+$",
+          "isRequired": true
+        }
+      ],
+      "transValidation": [
+        { "funcName": "checkBalance", "fields": "SENDERID:AMOUNT" }
+      ],
+      "glSteps": [
+        {
+          "order": 1,
+          "amount": "AMOUNT",
+          "debitLevel": "productLevel",
+          "debitTarget": "SENDERID",
+          "creditLevel": "wallet",
+          "creditTarget": "RECEIVERID"
+        },
+        {
+          "order": 2,
+          "amount": "FEE",
+          "debitLevel": "productLevel",
+          "debitTarget": "SENDERID",
+          "creditLevel": "wallet",
+          "creditTarget": "SYSTEM_FEE"
+        }
+      ]
+    }
+  ]
+}

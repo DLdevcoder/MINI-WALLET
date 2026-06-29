@@ -6,9 +6,9 @@ module.exports = {
         service: { model: 'service', required: true },
         sender: { type: 'string', required: true },
         receiver: { type: 'string', required: true },
-        amount: { type: 'number', required: true },
-        fee: { type: 'number', required: true },
-        totalAmount: { type: 'number', required: true },
-        status: { type: 'string', isIn: ['done', 'failed'], defaultsTo: 'done' }
+        amount: { type: 'float', required: true },
+        fee: { type: 'float', required: true },
+        totalAmount: { type: 'float', required: true },
+        status: { type: 'string', enum: ['done', 'failed'], defaultsTo: 'done' }
     }
 };

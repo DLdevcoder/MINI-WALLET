@@ -6,6 +6,6 @@ module.exports = {
         inquiryUrl: { type: 'string' },
         paymentUrl: { type: 'string' },
         pocket: { model: 'pocket' },
-        status: { type: 'string', isIn: ['active', 'inactive'], defaultsTo: 'active' }
+        status: { type: 'string', defaultsTo: 'active' }
     }
 };
