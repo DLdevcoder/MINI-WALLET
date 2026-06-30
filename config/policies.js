@@ -12,5 +12,14 @@ module.exports.policies = {
 
   PocketController: {
     '*': 'isAuthorized'
-  }
+  },
+
+  AuthController: {
+    'registerCustomer': true,
+    'loginCustomer': true,
+    'loginAdmin': true
+  },
+  AdminController: {
+    '*': 'isAuthorized'
+  },
 };

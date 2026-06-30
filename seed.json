@@ -27,8 +27,13 @@
       "code": "P2P_TRANSFER",
       "name": "Chuyển tiền nội bộ",
       "action": "none",
-      "auth": { "method": "PIN" },
-      "fee": { "type": "fixed", "value": 2000 },
+      "auth": {
+        "method": "PIN"
+      },
+      "fee": {
+        "type": "fixed",
+        "value": 2000
+      },
       "fieldBuilder": [
         {
           "order": 1,
@@ -70,7 +75,10 @@
         }
       ],
       "transValidation": [
-        { "funcName": "checkBalance", "fields": "SENDERID:AMOUNT" }
+        {
+          "funcName": "checkBalance",
+          "fields": "SENDERID:AMOUNT"
+        }
       ],
       "glSteps": [
         {
@@ -95,8 +103,13 @@
       "code": "BILL_PAYMENT",
       "name": "Thanh toán hoá đơn",
       "action": "billerTrans",
-      "auth": { "method": "PIN" },
-      "fee": { "type": "fixed", "value": 1000 },
+      "auth": {
+        "method": "PIN"
+      },
+      "fee": {
+        "type": "fixed",
+        "value": 1000
+      },
       "fieldBuilder": [
         {
           "order": 1,
@@ -132,7 +145,10 @@
         }
       ],
       "transValidation": [
-        { "funcName": "checkBalance", "fields": "SENDERID:AMOUNT" }
+        {
+          "funcName": "checkBalance",
+          "fields": "SENDERID:AMOUNT"
+        }
       ],
       "glSteps": [
         {

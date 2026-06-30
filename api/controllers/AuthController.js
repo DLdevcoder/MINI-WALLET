@@ -83,5 +83,42 @@ module.exports = {
             console.error('Login Error:', error);
             return res.error(RespCode.SYSTEM_ERROR);
         }
+    },
+
+    loginAdmin: async function (req, res) {
+        try {
+            const { username, password } = req.body;
+
+            if (!username || !password) {
+                return res.error(RespCode.MISSING_USERNAME_OR_PASSWORD);
+            }
+
+            const officer = await Officer.findOne({ username: username });
+            if (!officer) {
+                return res.error(RespCode.ADMIN_NOT_FOUND);
+            }
+
+            if (officer.status !== 'active') {
+                return res.error(RespCode.ACCOUNT_LOCKED);
+            }
+
+            const isMatch = bcrypt.compareSync(password.toString(), officer.passwordHash);
+            if (!isMatch) {
+                return res.error(RespCode.WRONG_PASSWORD);
+            }
+
+            const tokenPayload = {
+                id: officer.id,
+                username: officer.username,
+                role: 'officer'
+            };
+            const token = JwtService.issue(tokenPayload);
+
+            return res.ok({ token: token }, RespCode.LOGIN_SUCCESS.message);
+
+        } catch (error) {
+            console.error('Admin Login Error:', error);
+            return res.error(RespCode.SYSTEM_ERROR);
+        }
     }
 };

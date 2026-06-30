@@ -27,6 +27,8 @@ module.exports = {
   ACCOUNT_LOCKED: { code: 104, message: "Tài khoản đang bị tạm khóa" },
   MISSING_PHONE_OR_PIN: { code: 105, message: "Thiếu số điện thoại hoặc mã PIN" },
   WRONG_PIN: { code: 106, message: "Mã PIN không chính xác" },
+  MISSING_USERNAME_OR_PASSWORD: { code: 107, message: "Thiếu username hoặc mật khẩu" },
+  ADMIN_NOT_FOUND: { code: 108, message: "Không tìm thấy tài khoản Admin" },
 
   // Nhóm lỗi giao dịch / ví
   INSUFFICIENT_BALANCE: { code: 201, message: "Số dư ví không đủ để thực hiện giao dịch" },

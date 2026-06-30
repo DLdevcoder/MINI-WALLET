@@ -1,13 +1,28 @@
 const fs = require('fs');
 const path = require('path');
+const bcrypt = require('bcryptjs'); // Đảm bảo bạn đã require bcrypt ở trên cùng
 
 module.exports.bootstrap = async function (cb) {
   try {
-    // 1. Kiểm tra xem DB đã có dữ liệu chưa
-    const pocketCount = await Pocket.count();
-    if (pocketCount > 0) {
-      console.log('Dữ liệu đã tồn tại, bỏ qua bước Seed.');
-      return cb(); // Khởi động xong
+    // 1. Kiểm tra và tạo Admin (Luôn chạy nếu chưa có Admin)
+    const officerCount = await Officer.count();
+    if (officerCount === 0) {
+      const salt = bcrypt.genSaltSync(10);
+      const passwordHash = bcrypt.hashSync('123456', salt); // Mật khẩu 123456
+
+      await Officer.create({
+        username: 'admin',
+        passwordHash: passwordHash,
+        status: 'active'
+      });
+      console.log('--- Đã khởi tạo tài khoản Admin mặc định: admin / 123456 ---');
+    }
+
+    // 2. Kiểm tra dữ liệu cấu hình (Chỉ nạp nếu chưa có Service nào)
+    const serviceCount = await Service.count();
+    if (serviceCount > 0) {
+      console.log('Cấu hình Services đã tồn tại, bỏ qua bước Seed cấu hình.');
+      return cb();
     }
 
     const seedPath = path.resolve(__dirname, '../seed.json');
@@ -18,10 +33,10 @@ module.exports.bootstrap = async function (cb) {
 
     const seedData = JSON.parse(fs.readFileSync(seedPath, 'utf8'));
 
-    // 2. Nạp dữ liệu Pockets
+    // 3. Nạp dữ liệu Pockets
     if (seedData.Pockets && seedData.Pockets.length > 0) {
       const pocketsToCreate = seedData.Pockets.map(p => ({
-        // Bỏ qua id nếu để DB tự sinh, hoặc giữ nguyên nếu muốn ép id là chuỗi
+        id: p.id, // Giữ ID để khớp với config
         client: p.clientType,
         currency: p.currency,
         balance: p.balance,
@@ -31,7 +46,7 @@ module.exports.bootstrap = async function (cb) {
       console.log(`Đã nạp ${pocketsToCreate.length} ví nền tảng.`);
     }
 
-    // 3. Nạp dữ liệu Services
+    // 4. Nạp dữ liệu Services và các cấu hình liên quan
     if (seedData.Services && seedData.Services.length > 0) {
       for (const srv of seedData.Services) {
         const createdService = await Service.create({
@@ -41,7 +56,7 @@ module.exports.bootstrap = async function (cb) {
           auth: srv.auth,
           fee: srv.fee,
           fieldBuilder: srv.fieldBuilder
-        });
+        }).fetch(); // Thêm .fetch() để lấy dữ liệu vừa tạo
 
         if (srv.transField && srv.transField.length > 0) {
           const transFields = srv.transField.map((tf, index) => ({
@@ -81,14 +96,10 @@ module.exports.bootstrap = async function (cb) {
       console.log(`Đã nạp cấu hình cho ${seedData.Services.length} dịch vụ.`);
     }
 
-    // 4. Báo cáo hoàn thành cho Sails
     return cb();
-
   } catch (err) {
-    // Nếu có lỗi, in chi tiết lỗi ra màn hình thay vì [object Object]
     console.error('\n--- LỖI NẠP DỮ LIỆU SEED ---');
-    console.error(JSON.stringify(err, null, 2));
-    console.error('----------------------------\n');
+    console.error(err);
     return cb(err);
   }
 };

@@ -6,4 +6,6 @@ module.exports.routes = {
   'POST /auth/customer/login': 'AuthController.loginCustomer',
   'POST /pockets/me': 'PocketController.myPocket',
   'POST /transactions/me': 'TransactionController.myHistory',
+  'POST /auth/admin/login': 'AuthController.loginAdmin',
+  'POST /admin/cash-in': 'AdminController.cashIn',
 };
