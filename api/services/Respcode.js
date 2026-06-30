@@ -1,11 +1,15 @@
 module.exports = {
-  SUCCESS: 200,
+  SUCCESS: { code: 200, message: "Thành công" },
+  CONFIRM_SUCCESS: { code: 200, message: "Xác nhận thông tin thành công" },
 
   // Nhóm lỗi chung (hệ thống, dữ liệu)
-  INVALID_PARAMS: { code: 400, message: "Dữ liệu đầu vào bị thiếu hoặc không hợp lệ" },
+  INVALID_PARAMS: { code: 400, message: "Thiếu hoặc sai dữ liệu " },
+  MISSING_SERVICE_PARAMETERS: { code: 400, message: "Thiếu serviceCode và parameters" },
+  MISSING_TRANS_REF_ID: { code: 400, message: "Thiếu transRefId" },
   UNAUTHORIZED: { code: 401, message: "Phiên đăng nhập không hợp lệ hoặc đã hết hạn" },
   MISS_BEARER: { code: 403, message: "Thiếu token xác thực (Bearer)" },
   NOT_FOUND: { code: 404, message: "Không tìm thấy dữ liệu yêu cầu" },
+  TRANSACTION_NOT_FOUND: { code: 404, message: "Không tìm thấy giao dịch" },
   SYSTEM_ERROR: { code: 500, message: "Lỗi hệ thống nội bộ" },
 
   // Nhóm lỗi người dùng / tài khoản
