@@ -5,6 +5,7 @@
   "description": "a Sails application",
   "keywords": [],
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "jsonwebtoken": "^9.0.3",
     "sails": "0.12.14",
     "sails-disk": "0.10.10",
