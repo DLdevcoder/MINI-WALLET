@@ -6,6 +6,7 @@ module.exports = {
   LOGIN_SUCCESS: { code: 200, message: "Đăng nhập thành công" },
   REQUEST_SUCCESS: { code: 200, message: "Khởi tạo giao dịch thành công" },
   TRANSACTION_SUCCESS: { code: 200, message: "Giao dịch thành công" },
+  CASH_IN_SUCCESS: { code: 200, message: "Nạp tiền thành công" },
   GET_HISTORY_SUCCESS: { code: 200, message: "Lấy lịch sử giao dịch thành công" },
   GET_POCKET_SUCCESS: { code: 200, message: "Tra cứu số dư thành công" },
 

@@ -168,6 +168,74 @@
           "creditTarget": "SYSTEM_FEE"
         }
       ]
+    },
+    {
+      "code": "CASH_IN",
+      "name": "Nạp tiền cho khách",
+      "action": "none",
+      "auth": {
+        "method": "NONE"
+      },
+      "fee": {
+        "type": "fixed",
+        "value": 0
+      },
+      "fieldBuilder": [
+        {
+          "order": 1,
+          "name": "RECEIVERPHONE",
+          "rule": "mapping",
+          "source": "body.receiverPhone"
+        },
+        {
+          "order": 2,
+          "name": "AMOUNT",
+          "rule": "mapping",
+          "source": "body.amount"
+        },
+        {
+          "order": 3,
+          "name": "SENDERID",
+          "rule": "fixed",
+          "source": "BANK_POCKET_01"
+        },
+        {
+          "order": 4,
+          "name": "RECEIVERID",
+          "rule": "query",
+          "source": "queryPocketByPhone"
+        }
+      ],
+      "transField": [
+        {
+          "fieldName": "AMOUNT",
+          "dataType": "number",
+          "regex": "^[1-9][0-9]*$",
+          "isRequired": true
+        },
+        {
+          "fieldName": "RECEIVERPHONE",
+          "dataType": "string",
+          "regex": "^[0-9]{10}$",
+          "isRequired": true
+        }
+      ],
+      "transValidation": [
+        {
+          "funcName": "checkBankBalance",
+          "fields": "SENDERID:AMOUNT"
+        }
+      ],
+      "glSteps": [
+        {
+          "order": 1,
+          "amount": "AMOUNT",
+          "debitLevel": "wallet",
+          "debitTarget": "BANK_POCKET_01",
+          "creditLevel": "productLevel",
+          "creditTarget": "RECEIVERID"
+        }
+      ]
     }
   ]
 }

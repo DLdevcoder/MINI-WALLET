@@ -3,7 +3,8 @@ module.exports.policies = {
 
   AuthController: {
     'registerCustomer': true,
-    'loginCustomer': true
+    'loginCustomer': true,
+    'loginAdmin': true
   },
 
   TransactionController: {
@@ -14,12 +15,7 @@ module.exports.policies = {
     '*': 'isAuthorized'
   },
 
-  AuthController: {
-    'registerCustomer': true,
-    'loginCustomer': true,
-    'loginAdmin': true
-  },
   AdminController: {
-    '*': 'isAuthorized'
+    '*': 'isOfficer'
   },
-};
+};

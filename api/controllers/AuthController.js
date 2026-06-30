@@ -18,9 +18,10 @@ module.exports = {
             const salt = bcrypt.genSaltSync(10);
             const pinHash = bcrypt.hashSync(pin.toString(), salt);
 
-            const pocketId = 'POCKET_' + phone;
+            // Dùng 'user: phone' làm identifier thay vì custom id
+            // (sails-mongo v0.12 không hỗ trợ custom string id, bị coerce sang NaN)
             const newPocket = await Pocket.create({
-                id: pocketId,
+                user: phone,
                 client: 'customer',
                 currency: 'VND',
                 balance: 100000,
