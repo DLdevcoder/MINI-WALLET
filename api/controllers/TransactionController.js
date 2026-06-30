@@ -162,5 +162,167 @@ module.exports = {
             const err = RespCode.SYSTEM_ERROR;
             return res.status(200).json({ err: err.code, message: err.message, data: null });
         }
+    },
+
+    verify: async function (req, res) {
+        try {
+            const { transRefId, pin } = req.body;
+
+            if (!transRefId) {
+                const err = RespCode.MISSING_TRANS_REF_ID;
+                return res.status(200).json({ err: err.code, message: err.message, data: null });
+            }
+
+            // 1. Nạp và kiểm tra TransactionTrail
+            const trail = await TransactionTrail.findOne({ transRefId: transRefId });
+            if (!trail) {
+                const err = RespCode.TRANSACTION_NOT_FOUND;
+                return res.status(200).json({ err: err.code, message: err.message, data: null });
+            }
+
+            if (trail.status !== 'pending') {
+                const err = RespCode.INVALID_TRANS_STATE;
+                return res.status(200).json({ err: err.code, message: err.message, data: null });
+            }
+
+            // Đổi trạng thái sang inProgress để khóa giao dịch
+            await TransactionTrail.update({ transRefId }, { status: 'inProgress' });
+
+            const serviceCode = trail.inputMessage.serviceCode;
+            const transBody = trail.inputMessage.transBody;
+
+            // 2. Lấy thông tin Service và kiểm tra PIN
+            const service = await Service.findOne({ code: serviceCode });
+            if (service.auth && service.auth.method === 'PIN') {
+                if (!pin) {
+                    await TransactionTrail.update({ transRefId }, { status: 'pending' });
+                    const err = RespCode.INVALID_OTP;
+                    return res.status(200).json({ err: err.code, message: "Thiếu mã PIN xác thực", data: null });
+                }
+
+                if (pin !== '123456') { // Tạm thời hardcode cho việc test luồng
+                    await TransactionTrail.update({ transRefId }, { status: 'pending' });
+                    const err = RespCode.INVALID_OTP;
+                    return res.status(200).json({ err: err.code, message: err.message, data: null });
+                }
+            }
+
+            // 3. Đọc kịch bản ghi sổ kép (glSteps) từ TransDefinition
+            const definition = await TransDefinition.findOne({ service: service.id });
+            if (!definition || !definition.glSteps) {
+                throw new Error("Không tìm thấy cấu hình TransDefinition cho dịch vụ này.");
+            }
+
+            // Xử lý chuyển đổi ID người nhận (từ số điện thoại)
+            if (!transBody['RECEIVERID'] && transBody['RECEIVERPHONE']) {
+                transBody['RECEIVERID'] = 'POCKET_' + transBody['RECEIVERPHONE'];
+            }
+
+            // Xử lý chuyển đổi ID người gửi (nếu được truyền vào là số điện thoại)
+            if (transBody['SENDERID'] && /^[0-9]{10}$/.test(transBody['SENDERID'])) {
+                transBody['SENDERID'] = 'POCKET_' + transBody['SENDERID'];
+            }
+
+            let finalTotalAmount = 0;
+            let finalFee = 0;
+
+            // Hàm helper bọc callback native MongoDB thành Promise
+            const updateBalanceNative = (pocketId, amountChange) => {
+                return new Promise((resolve, reject) => {
+                    Pocket.native(function (err, collection) {
+                        if (err) return reject(err);
+                        collection.updateOne(
+                            { id: pocketId },
+                            { $inc: { balance: amountChange } },
+                            function (err, result) {
+                                if (err) return reject(err);
+                                resolve(result);
+                            }
+                        );
+                    });
+                });
+            };
+
+            for (const step of definition.glSteps) {
+                // Xử lý lấy số tiền linh hoạt và an toàn
+                let stepAmount = 0;
+                if (step.amount === 'FEE') {
+                    stepAmount = parseFloat(trail.inputMessage.fee) || 0;
+                } else {
+                    stepAmount = parseFloat(transBody[step.amount]) || 0;
+                }
+
+                // Chặn các giá trị lỗi hoặc bằng 0
+                if (!stepAmount || stepAmount <= 0) continue;
+
+                if (step.amount === 'AMOUNT') finalTotalAmount += stepAmount;
+                if (step.amount === 'FEE') {
+                    finalFee += stepAmount;
+                    finalTotalAmount += stepAmount;
+                }
+
+                // Hỗ trợ cả 2 định dạng cấu hình (nested hoặc flat)
+                const debitLvl = step.debit ? step.debit.level : step.debitLevel;
+                const debitTgt = step.debit ? step.debit.target : step.debitTarget;
+                const creditLvl = step.credit ? step.credit.level : step.creditLevel;
+                const creditTgt = step.credit ? step.credit.target : step.creditTarget;
+
+                // Xác định chính xác ID Ví
+                const debitPocketId = debitLvl === 'productLevel' ? transBody[debitTgt] : debitTgt;
+                const creditPocketId = creditLvl === 'productLevel' ? transBody[creditTgt] : creditTgt;
+
+                if (debitPocketId) {
+                    await updateBalanceNative(debitPocketId, -Math.abs(stepAmount));
+                }
+
+                if (creditPocketId) {
+                    await updateBalanceNative(creditPocketId, Math.abs(stepAmount));
+                }
+
+                await PocketEntry.create({
+                    transRefId: transRefId,
+                    stepOrder: step.order,
+                    debit: debitPocketId,
+                    credit: creditPocketId,
+                    amount: stepAmount,
+                    status: 'settled'
+                });
+            }
+
+            // 4. Tạo Biên lai tổng kết
+            const transRecord = await Transaction.create({
+                code: transRefId.replace('TXN', 'GD'),
+                transRefId: transRefId,
+                service: service.id,
+                sender: transBody['SENDERID'],
+                receiver: transBody['RECEIVERID'] || transBody['RECEIVERPHONE'],
+                amount: parseFloat(transBody['AMOUNT']),
+                fee: finalFee,
+                totalAmount: finalTotalAmount,
+                status: 'done'
+            });
+
+            // 5. Chốt trạng thái Trail
+            await TransactionTrail.update({ transRefId }, { status: 'done' });
+
+            return res.status(200).json({
+                err: RespCode.SUCCESS.code,
+                message: 'Giao dịch thành công',
+                data: {
+                    transactionCode: transRecord.code,
+                    amount: transRecord.amount,
+                    fee: transRecord.fee,
+                    totalAmount: transRecord.totalAmount
+                }
+            });
+
+        } catch (error) {
+            console.error('Transaction Verify Error:', error);
+            if (req.body.transRefId) {
+                await TransactionTrail.update({ transRefId: req.body.transRefId }, { status: 'failed' });
+            }
+            const err = RespCode.SYSTEM_ERROR;
+            return res.status(200).json({ err: err.code, message: err.message, data: null });
+        }
     }
 };
