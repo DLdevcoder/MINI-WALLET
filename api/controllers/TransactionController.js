@@ -6,22 +6,14 @@ module.exports = {
             const { serviceCode, parameters } = req.body;
 
             if (!serviceCode || !parameters) {
-                const err = RespCode.MISSING_SERVICE_PARAMETERS;
-                return res.status(200).json({
-                    err: err.code,
-                    message: err.message,
-                    data: null
-                });
+                return res.error(RespCode.MISSING_SERVICE_PARAMETERS);
             }
 
-            // 1. Lấy thông tin Service
             const service = await Service.findOne({ code: serviceCode, status: 'active' });
             if (!service) {
-                const err = RespCode.SERVICE_UNAVAILABLE;
-                return res.status(200).json({ err: err.code, message: err.message, data: null });
+                return res.error(RespCode.SERVICE_UNAVAILABLE);
             }
 
-            // 2. Dựng TRANSBODY dựa trên Service.fieldBuilder
             let transBody = {};
             const fieldBuilders = service.fieldBuilder || [];
 
@@ -37,39 +29,28 @@ module.exports = {
                     transBody[name] = null;
                 }
             }
+
             if (!transBody['SENDERID']) {
-                transBody['SENDERID'] = req.user ? req.user.id : parameters.senderId;
+                transBody['SENDERID'] = req.user ? req.user.id : null;
             }
 
-            // 3. Đọc TransField và Validate định dạng TRANSBODY
             const transFields = await TransField.find({ service: service.id });
 
             for (const tf of transFields) {
                 const val = transBody[tf.fieldName];
 
                 if (tf.isRequired && (val === undefined || val === null || val === '')) {
-                    const err = RespCode.MISS_INFO;
-                    return res.status(200).json({
-                        err: err.code,
-                        message: err.message + `${tf.fieldName}`,
-                        data: null
-                    });
+                    return res.error(RespCode.MISS_INFO);
                 }
 
                 if (tf.regex && val) {
                     const regex = new RegExp(tf.regex);
                     if (!regex.test(val.toString())) {
-                        const err = RespCode.INVALID_PARAMS;
-                        return res.status(200).json({
-                            err: err.code,
-                            message: `${tf.fieldName}`,
-                            data: null
-                        });
+                        return res.error(RespCode.INVALID_FIELD_FORMAT);
                     }
                 }
             }
 
-            // 4. Tính toán Fee và TotalAmount
             let amount = parseFloat(transBody['AMOUNT']) || 0;
             let fee = 0;
 
@@ -83,13 +64,13 @@ module.exports = {
             }
 
             const totalAmount = amount + fee;
-
-            // 5. Khởi tạo TransactionTrail
             const transRefId = 'TXN' + Date.now() + Math.floor(1000 + Math.random() * 9000);
+
             const inputMessage = {
                 serviceCode: serviceCode,
                 parameters: parameters,
-                transBody: transBody
+                transBody: transBody,
+                fee: fee
             };
 
             const trail = await TransactionTrail.create({
@@ -98,69 +79,52 @@ module.exports = {
                 status: 'pending'
             });
 
-            // 6. Trả về kết quả
-            return res.status(200).json({
-                err: RespCode.SUCCESS,
-                message: 'Thành công',
-                data: {
-                    transRefId: trail.transRefId,
-                    amount: amount,
-                    fee: fee,
-                    totalAmount: totalAmount,
-                    status: trail.status
-                }
-            });
+            return res.ok({
+                transRefId: trail.transRefId,
+                amount: amount,
+                fee: fee,
+                totalAmount: totalAmount,
+                status: trail.status
+            }, RespCode.REQUEST_SUCCESS.message);
 
         } catch (error) {
             console.error('Transaction Request Error:', error);
-            const err = RespCode.SYSTEM_ERROR;
-            return res.status(200).json({ err: err.code, message: err.message, data: null });
+            return res.error(RespCode.SYSTEM_ERROR);
         }
     },
 
     confirm: async function (req, res) {
         try {
-            const { transRefId, parameters } = req.body;
+            const { transRefId } = req.body;
 
             if (!transRefId) {
-                const err = RespCode.MISSING_TRANS_REF_ID;
-                return res.status(200).json({ err: err.code, message: err.message, data: null });
+                return res.error(RespCode.MISSING_TRANS_REF_ID);
             }
 
-            // 1. Nạp lại TransactionTrail
             const trail = await TransactionTrail.findOne({ transRefId: transRefId });
             if (!trail) {
-                const err = RespCode.TRANSACTION_NOT_FOUND;
-                return res.status(200).json({ err: err.code, message: err.message, data: null });
+                return res.error(RespCode.TRANSACTION_NOT_FOUND);
             }
 
             if (trail.status !== 'pending') {
-                const err = RespCode.INVALID_TRANS_STATE;
-                return res.status(200).json({ err: err.code, message: err.message, data: null });
+                return res.error(RespCode.INVALID_TRANS_STATE);
             }
 
-            // 2. Lấy thông tin Service để kiểm tra Auth Method
             const service = await Service.findOne({ code: trail.inputMessage.serviceCode });
             if (!service) {
-                const err = RespCode.SERVICE_UNAVAILABLE;
-                return res.status(200).json({ err: err.code, message: err.message, data: null });
+                return res.error(RespCode.SERVICE_UNAVAILABLE);
             }
 
-            return res.status(200).json({
-                err: RespCode.CONFIRM_SUCCESS.code,
-                message: RespCode.CONFIRM_SUCCESS.message,
-                data: {
-                    transRefId: trail.transRefId,
-                    authMethod: service.auth.method,
-                    amount: trail.inputMessage.transBody.AMOUNT,
-                    fee: trail.inputMessage.fee || 0
-                }
-            });
+            return res.ok({
+                transRefId: trail.transRefId,
+                authMethod: service.auth.method,
+                amount: trail.inputMessage.transBody.AMOUNT,
+                fee: trail.inputMessage.fee || 0
+            }, RespCode.CONFIRM_SUCCESS.message);
 
         } catch (error) {
             console.error('Transaction Confirm Error:', error);
-            const err = RespCode.SYSTEM_ERROR;
-            return res.status(200).json({ err: err.code, message: err.message, data: null });
+            return res.error(RespCode.SYSTEM_ERROR);
         }
     },
 
@@ -169,56 +133,45 @@ module.exports = {
             const { transRefId, pin } = req.body;
 
             if (!transRefId) {
-                const err = RespCode.MISSING_TRANS_REF_ID;
-                return res.status(200).json({ err: err.code, message: err.message, data: null });
+                return res.error(RespCode.MISSING_TRANS_REF_ID);
             }
 
-            // 1. Nạp và kiểm tra TransactionTrail
             const trail = await TransactionTrail.findOne({ transRefId: transRefId });
             if (!trail) {
-                const err = RespCode.TRANSACTION_NOT_FOUND;
-                return res.status(200).json({ err: err.code, message: err.message, data: null });
+                return res.error(RespCode.TRANSACTION_NOT_FOUND);
             }
 
             if (trail.status !== 'pending') {
-                const err = RespCode.INVALID_TRANS_STATE;
-                return res.status(200).json({ err: err.code, message: err.message, data: null });
+                return res.error(RespCode.INVALID_TRANS_STATE);
             }
 
-            // Đổi trạng thái sang inProgress để khóa giao dịch
             await TransactionTrail.update({ transRefId }, { status: 'inProgress' });
 
             const serviceCode = trail.inputMessage.serviceCode;
             const transBody = trail.inputMessage.transBody;
 
-            // 2. Lấy thông tin Service và kiểm tra PIN
             const service = await Service.findOne({ code: serviceCode });
             if (service.auth && service.auth.method === 'PIN') {
                 if (!pin) {
                     await TransactionTrail.update({ transRefId }, { status: 'pending' });
-                    const err = RespCode.INVALID_OTP;
-                    return res.status(200).json({ err: err.code, message: "Thiếu mã PIN xác thực", data: null });
+                    return res.error(RespCode.MISSING_PIN);
                 }
 
-                if (pin !== '123456') { // Tạm thời hardcode cho việc test luồng
+                if (pin !== '123456') {
                     await TransactionTrail.update({ transRefId }, { status: 'pending' });
-                    const err = RespCode.INVALID_OTP;
-                    return res.status(200).json({ err: err.code, message: err.message, data: null });
+                    return res.error(RespCode.INVALID_OTP);
                 }
             }
 
-            // 3. Đọc kịch bản ghi sổ kép (glSteps) từ TransDefinition
             const definition = await TransDefinition.findOne({ service: service.id });
             if (!definition || !definition.glSteps) {
                 throw new Error("Không tìm thấy cấu hình TransDefinition cho dịch vụ này.");
             }
 
-            // Xử lý chuyển đổi ID người nhận (từ số điện thoại)
             if (!transBody['RECEIVERID'] && transBody['RECEIVERPHONE']) {
                 transBody['RECEIVERID'] = 'POCKET_' + transBody['RECEIVERPHONE'];
             }
 
-            // Xử lý chuyển đổi ID người gửi (nếu được truyền vào là số điện thoại)
             if (transBody['SENDERID'] && /^[0-9]{10}$/.test(transBody['SENDERID'])) {
                 transBody['SENDERID'] = 'POCKET_' + transBody['SENDERID'];
             }
@@ -226,7 +179,6 @@ module.exports = {
             let finalTotalAmount = 0;
             let finalFee = 0;
 
-            // Hàm helper bọc callback native MongoDB thành Promise
             const updateBalanceNative = (pocketId, amountChange) => {
                 return new Promise((resolve, reject) => {
                     Pocket.native(function (err, collection) {
@@ -244,7 +196,6 @@ module.exports = {
             };
 
             for (const step of definition.glSteps) {
-                // Xử lý lấy số tiền linh hoạt và an toàn
                 let stepAmount = 0;
                 if (step.amount === 'FEE') {
                     stepAmount = parseFloat(trail.inputMessage.fee) || 0;
@@ -252,7 +203,6 @@ module.exports = {
                     stepAmount = parseFloat(transBody[step.amount]) || 0;
                 }
 
-                // Chặn các giá trị lỗi hoặc bằng 0
                 if (!stepAmount || stepAmount <= 0) continue;
 
                 if (step.amount === 'AMOUNT') finalTotalAmount += stepAmount;
@@ -261,13 +211,11 @@ module.exports = {
                     finalTotalAmount += stepAmount;
                 }
 
-                // Hỗ trợ cả 2 định dạng cấu hình (nested hoặc flat)
                 const debitLvl = step.debit ? step.debit.level : step.debitLevel;
                 const debitTgt = step.debit ? step.debit.target : step.debitTarget;
                 const creditLvl = step.credit ? step.credit.level : step.creditLevel;
                 const creditTgt = step.credit ? step.credit.target : step.creditTarget;
 
-                // Xác định chính xác ID Ví
                 const debitPocketId = debitLvl === 'productLevel' ? transBody[debitTgt] : debitTgt;
                 const creditPocketId = creditLvl === 'productLevel' ? transBody[creditTgt] : creditTgt;
 
@@ -289,7 +237,6 @@ module.exports = {
                 });
             }
 
-            // 4. Tạo Biên lai tổng kết
             const transRecord = await Transaction.create({
                 code: transRefId.replace('TXN', 'GD'),
                 transRefId: transRefId,
@@ -302,27 +249,55 @@ module.exports = {
                 status: 'done'
             });
 
-            // 5. Chốt trạng thái Trail
             await TransactionTrail.update({ transRefId }, { status: 'done' });
 
-            return res.status(200).json({
-                err: RespCode.SUCCESS.code,
-                message: 'Giao dịch thành công',
-                data: {
-                    transactionCode: transRecord.code,
-                    amount: transRecord.amount,
-                    fee: transRecord.fee,
-                    totalAmount: transRecord.totalAmount
-                }
-            });
+            return res.ok({
+                transactionCode: transRecord.code,
+                amount: transRecord.amount,
+                fee: transRecord.fee,
+                totalAmount: transRecord.totalAmount
+            }, RespCode.TRANSACTION_SUCCESS.message);
 
         } catch (error) {
             console.error('Transaction Verify Error:', error);
             if (req.body.transRefId) {
                 await TransactionTrail.update({ transRefId: req.body.transRefId }, { status: 'failed' });
             }
-            const err = RespCode.SYSTEM_ERROR;
-            return res.status(200).json({ err: err.code, message: err.message, data: null });
+            return res.error(RespCode.SYSTEM_ERROR);
+        }
+    },
+
+    myHistory: async function (req, res) {
+        try {
+            const pocketId = req.user.id;
+            const phone = req.user.phone;
+
+            const page = parseInt(req.body.page) || 1;
+            const limit = parseInt(req.body.limit) || 10;
+            const skip = (page - 1) * limit;
+
+            const transactions = await Transaction.find({
+                or: [
+                    { sender: pocketId },
+                    { sender: phone },
+                    { receiver: pocketId },
+                    { receiver: phone }
+                ],
+                status: 'done'
+            })
+                .sort('createdAt DESC')
+                .skip(skip)
+                .limit(limit);
+
+            return res.ok({
+                page: page,
+                limit: limit,
+                records: transactions
+            }, RespCode.GET_HISTORY_SUCCESS.message);
+
+        } catch (error) {
+            console.error('Get My History Error:', error);
+            return res.error(RespCode.SYSTEM_ERROR);
         }
     }
 };

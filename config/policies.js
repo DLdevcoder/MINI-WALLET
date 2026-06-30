@@ -1,11 +1,16 @@
 module.exports.policies = {
-  '*': true, // Mặc định mở
-
-  TransactionController: {
-    '*': 'isAuthorized' // Chỉ khóa chặt Core Engine
-  },
+  '*': false,
 
   AuthController: {
-    '*': true // Cho phép ai cũng gọi được Đăng ký/Đăng nhập
+    'registerCustomer': true,
+    'loginCustomer': true
+  },
+
+  TransactionController: {
+    '*': 'isAuthorized'
+  },
+
+  PocketController: {
+    '*': 'isAuthorized'
   }
 };

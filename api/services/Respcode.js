@@ -1,9 +1,17 @@
 module.exports = {
+  // Nhóm thành công
   SUCCESS: { code: 200, message: "Thành công" },
   CONFIRM_SUCCESS: { code: 200, message: "Xác nhận thông tin thành công" },
+  REGISTER_SUCCESS: { code: 200, message: "Đăng ký tài khoản thành công" },
+  LOGIN_SUCCESS: { code: 200, message: "Đăng nhập thành công" },
+  REQUEST_SUCCESS: { code: 200, message: "Khởi tạo giao dịch thành công" },
+  TRANSACTION_SUCCESS: { code: 200, message: "Giao dịch thành công" },
+  GET_HISTORY_SUCCESS: { code: 200, message: "Lấy lịch sử giao dịch thành công" },
+  GET_POCKET_SUCCESS: { code: 200, message: "Tra cứu số dư thành công" },
 
   // Nhóm lỗi chung (hệ thống, dữ liệu)
-  INVALID_PARAMS: { code: 400, message: "Thiếu hoặc sai dữ liệu " },
+  INVALID_PARAMS: { code: 400, message: "Thiếu hoặc sai dữ liệu" },
+  INVALID_FIELD_FORMAT: { code: 400, message: "Sai định dạng trường dữ liệu đầu vào" },
   MISSING_SERVICE_PARAMETERS: { code: 400, message: "Thiếu serviceCode và parameters" },
   MISSING_TRANS_REF_ID: { code: 400, message: "Thiếu transRefId" },
   UNAUTHORIZED: { code: 401, message: "Phiên đăng nhập không hợp lệ hoặc đã hết hạn" },
@@ -17,6 +25,8 @@ module.exports = {
   USER_NOT_FOUND: { code: 102, message: "Không tìm thấy người dùng" },
   WRONG_PASSWORD: { code: 103, message: "Mật khẩu không chính xác" },
   ACCOUNT_LOCKED: { code: 104, message: "Tài khoản đang bị tạm khóa" },
+  MISSING_PHONE_OR_PIN: { code: 105, message: "Thiếu số điện thoại hoặc mã PIN" },
+  WRONG_PIN: { code: 106, message: "Mã PIN không chính xác" },
 
   // Nhóm lỗi giao dịch / ví
   INSUFFICIENT_BALANCE: { code: 201, message: "Số dư ví không đủ để thực hiện giao dịch" },
@@ -26,5 +36,6 @@ module.exports = {
   MISS_INFO: { code: 205, message: "Yêu cầu giao dịch thiếu thông tin bắt buộc" },
   SERVICE_UNAVAILABLE: { code: 206, message: "Dịch vụ không tồn tại hoặc đang bảo trì" },
   INVALID_TRANS_STATE: { code: 207, message: "Trạng thái giao dịch không hợp lệ (đã xử lý hoặc hết hạn)" },
-  INVALID_OTP: { code: 208, message: "Mã xác thực (OTP/PIN) không chính xác" }
+  INVALID_OTP: { code: 208, message: "Mã xác thực (OTP/PIN) không chính xác" },
+  MISSING_PIN: { code: 209, message: "Thiếu mã PIN xác thực" }
 };
