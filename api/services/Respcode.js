@@ -30,6 +30,7 @@ module.exports = {
   WRONG_PIN: { code: 106, message: "Mã PIN không chính xác" },
   MISSING_USERNAME_OR_PASSWORD: { code: 107, message: "Thiếu username hoặc mật khẩu" },
   ADMIN_NOT_FOUND: { code: 108, message: "Không tìm thấy tài khoản Admin" },
+  INVALID_PIN_FORMAT: { code: 109, message: "Mã PIN phải là đúng 6 chữ số" },
 
   // Nhóm lỗi giao dịch / ví
   INSUFFICIENT_BALANCE: { code: 201, message: "Số dư ví không đủ để thực hiện giao dịch" },

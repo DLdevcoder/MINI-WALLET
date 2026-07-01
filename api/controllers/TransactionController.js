@@ -1,3 +1,4 @@
+const bcrypt = require('bcryptjs');
 const RespCode = require('../services/Respcode');
 
 module.exports = {
@@ -157,7 +158,19 @@ module.exports = {
                     return res.error(RespCode.MISSING_PIN);
                 }
 
-                if (pin !== '123456') {
+                if (!/^\d{6}$/.test(pin.toString())) {
+                    await TransactionTrail.update({ transRefId }, { status: 'pending' });
+                    return res.error(RespCode.INVALID_PIN_FORMAT);
+                }
+
+                const customer = await Customer.findOne({ phone: req.user.phone });
+                if (!customer) {
+                    await TransactionTrail.update({ transRefId }, { status: 'pending' });
+                    return res.error(RespCode.USER_NOT_FOUND);
+                }
+
+                const isPinValid = bcrypt.compareSync(pin.toString(), customer.pinHash);
+                if (!isPinValid) {
                     await TransactionTrail.update({ transRefId }, { status: 'pending' });
                     return res.error(RespCode.INVALID_OTP);
                 }

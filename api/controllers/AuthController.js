@@ -10,6 +10,10 @@ module.exports = {
                 return res.error(RespCode.MISSING_PHONE_OR_PIN);
             }
 
+            if (!/^\d{6}$/.test(pin.toString())) {
+                return res.error(RespCode.INVALID_PIN_FORMAT);
+            }
+
             const existingCustomer = await Customer.findOne({ phone: phone });
             if (existingCustomer) {
                 return res.error(RespCode.PHONE_EXISTED);
@@ -18,8 +22,6 @@ module.exports = {
             const salt = bcrypt.genSaltSync(10);
             const pinHash = bcrypt.hashSync(pin.toString(), salt);
 
-            // Dùng 'user: phone' làm identifier thay vì custom id
-            // (sails-mongo v0.12 không hỗ trợ custom string id, bị coerce sang NaN)
             const newPocket = await Pocket.create({
                 user: phone,
                 client: 'customer',
@@ -59,6 +61,10 @@ module.exports = {
 
             if (!phone || !pin) {
                 return res.error(RespCode.MISSING_PHONE_OR_PIN);
+            }
+
+            if (!/^\d{6}$/.test(pin.toString())) {
+                return res.error(RespCode.INVALID_PIN_FORMAT);
             }
 
             const customer = await Customer.findOne({ phone: phone });
