@@ -1,7 +1,138 @@
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const RespCode = require('../services/Respcode');
+// Tính checksum bảo vệ số dư ví
+function computeChecksum(balance, pocketId) {
+    return crypto.createHash('sha256')
+        .update(`${balance}|${pocketId}`)
+        .digest('hex');
+}
+
+// Dùng native MongoDB để $inc balance + cập nhật checksum cùng lúc
+function updatePocketBalance(pocketId, amountChange) {
+    return new Promise((resolve, reject) => {
+        Pocket.native(function (err, collection) {
+            if (err) return reject(err);
+
+            let objectId;
+            try {
+                const mongodb = require('mongodb');
+                const ObjectId = mongodb.ObjectID || mongodb.ObjectId;
+                objectId = new ObjectId(pocketId);
+            } catch (e) {
+                objectId = pocketId; // fallback nếu là string thuần
+            }
+
+            collection.findOneAndUpdate(
+                { _id: objectId },
+                { $inc: { balance: amountChange } },
+                // Bổ sung returnDocument: 'after' để hỗ trợ các phiên bản MongoDB driver mới
+                { returnOriginal: false, returnDocument: 'after' },
+                function (err, result) {
+                    if (err) return reject(err);
+
+                    // Tương thích chuẩn trả về của driver v3, v4 và v5
+                    const doc = result.value || result;
+                    if (!doc || doc.balance === undefined) {
+                        return reject(new Error('Pocket not found or missing balance: ' + pocketId));
+                    }
+
+                    const newBalance = doc.balance;
+                    const newChecksum = computeChecksum(newBalance, pocketId);
+
+                    collection.updateOne(
+                        { _id: objectId },
+                        { $set: { checksum: newChecksum } },
+                        function (err2) {
+                            if (err2) return reject(err2);
+                            resolve({ newBalance, newChecksum });
+                        }
+                    );
+                }
+            );
+        });
+    });
+}
+
+/**
+ * Giải quyết Pocket ID từ level + target
+ */
+async function resolvePocketId(level, target, transBody) {
+    if (level === 'wallet') {
+        // Nếu target nằm trong transBody (như 'RECEIVERID'), lấy ID thật (như 'BILLER_EVN')
+        // Nếu không có, hiểu target chính là ID cứng (như 'SYSTEM_FEE')
+        const realTarget = transBody[target] !== undefined ? transBody[target] : target;
+
+        // Truy vấn ví hệ thống qua trường 'user'
+        const pocket = await Pocket.findOne({ user: realTarget });
+        return pocket ? pocket.id : null;
+    }
+
+    // level === 'productLevel': target LUÔN là một biến trong transBody (VD: 'SENDERID', 'RECEIVERID')
+    return transBody[target] || null;
+}
+
+/**
+ * Khoá ví người gửi bằng Native DB để tránh ORM ghi đè
+ */
+function lockPocket(pocketId) {
+    return new Promise((resolve, reject) => {
+        Pocket.native(function (err, collection) {
+            if (err) return reject(err);
+
+            let objectId;
+            try {
+                const mongodb = require('mongodb');
+                const ObjectId = mongodb.ObjectID || mongodb.ObjectId;
+                objectId = new ObjectId(pocketId);
+            } catch (e) {
+                objectId = pocketId;
+            }
+
+            collection.findOneAndUpdate(
+                { _id: objectId, status: 'active' },
+                { $set: { status: 'inProgress' } },
+                function (err, result) {
+                    if (err) return reject(err);
+                    const doc = result.value || result;
+                    resolve(!!doc);
+                }
+            );
+        });
+    });
+}
+
+/**
+ * Mở khoá ví bằng Native DB
+ */
+function unlockPocket(pocketId) {
+    return new Promise((resolve) => {
+        Pocket.native(function (err, collection) {
+            if (err) return resolve(); // Bỏ qua lỗi để tiếp tục luồng trả response
+
+            let objectId;
+            try {
+                const mongodb = require('mongodb');
+                const ObjectId = mongodb.ObjectID || mongodb.ObjectId;
+                objectId = new ObjectId(pocketId);
+            } catch (e) {
+                objectId = pocketId;
+            }
+
+            collection.updateOne(
+                { _id: objectId },
+                { $set: { status: 'active' } },
+                function () {
+                    resolve();
+                }
+            );
+        });
+    });
+}
 
 module.exports = {
+
+    // BƯỚC 1 — REQUEST
     request: async function (req, res) {
         try {
             const { serviceCode, parameters } = req.body;
@@ -15,26 +146,48 @@ module.exports = {
                 return res.error(RespCode.SERVICE_UNAVAILABLE);
             }
 
+            // Dựng TRANSBODY từ fieldBuilder
             let transBody = {};
-            const fieldBuilders = service.fieldBuilder || [];
+            const fieldBuilders = (service.fieldBuilder || []).sort((a, b) => (a.order || 0) - (b.order || 0));
 
             for (const builder of fieldBuilders) {
                 const { name, rule, source, variable } = builder;
 
                 if (rule === 'mapping') {
                     const key = source.split('.').pop();
-                    transBody[name] = parameters[key];
+                    if (source.startsWith('ctx.')) {
+                        // Lấy từ context JWT
+                        if (key === 'senderId') transBody[name] = req.user ? req.user.id : null;
+                    } else {
+                        // Lấy từ parameters (body request)
+                        transBody[name] = (parameters[key] !== undefined) ? parameters[key] : null;
+                    }
+
                 } else if (rule === 'fixed') {
-                    transBody[name] = variable || source;
+                    transBody[name] = (variable !== undefined && variable !== null) ? variable : source;
+
                 } else if (rule === 'query') {
-                    transBody[name] = null;
+                    if (source === 'queryPocketByPhone') {
+                        // Tra Customer theo RECEIVERPHONE, lấy pocket ID thật
+                        const phone = transBody['RECEIVERPHONE'];
+                        if (phone) {
+                            const receiver = await Customer.findOne({ phone: String(phone) });
+                            transBody[name] = receiver ? receiver.pocket : null;
+                        } else {
+                            transBody[name] = null;
+                        }
+                    } else {
+                        transBody[name] = null;
+                    }
                 }
             }
 
-            if (!transBody['SENDERID']) {
-                transBody['SENDERID'] = req.user ? req.user.id : null;
+            // Đảm bảo SENDERID luôn được gán từ JWT
+            if (!transBody['SENDERID'] && req.user) {
+                transBody['SENDERID'] = req.user.id;
             }
 
+            // Validate định dạng (TransField)
             const transFields = await TransField.find({ service: service.id });
 
             for (const tf of transFields) {
@@ -44,7 +197,7 @@ module.exports = {
                     return res.error(RespCode.MISS_INFO);
                 }
 
-                if (tf.regex && val) {
+                if (tf.regex && val !== null && val !== undefined) {
                     const regex = new RegExp(tf.regex);
                     if (!regex.test(val.toString())) {
                         return res.error(RespCode.INVALID_FIELD_FORMAT);
@@ -52,12 +205,24 @@ module.exports = {
                 }
             }
 
+            // Kiểm tra người nhận tồn tại sau khi query
+            if (transBody['RECEIVERPHONE'] && !transBody['RECEIVERID']) {
+                return res.error(RespCode.USER_NOT_FOUND);
+            }
+
+            // Không được chuyển tiền cho chính mình
+            if (transBody['SENDERID'] && transBody['RECEIVERID'] &&
+                String(transBody['SENDERID']) === String(transBody['RECEIVERID'])) {
+                return res.error(RespCode.TRANSFER_SELF);
+            }
+
+            // Tính phí
             let amount = parseFloat(transBody['AMOUNT']) || 0;
             let fee = 0;
 
             if (service.fee) {
                 if (service.fee.type === 'fixed') {
-                    fee = service.fee.value;
+                    fee = service.fee.value || 0;
                 } else if (service.fee.type === 'percent') {
                     fee = amount * (service.fee.value / 100);
                     if (service.fee.max && fee > service.fee.max) fee = service.fee.max;
@@ -65,18 +230,29 @@ module.exports = {
             }
 
             const totalAmount = amount + fee;
-            const transRefId = 'TXN' + Date.now() + Math.floor(1000 + Math.random() * 9000);
 
-            const inputMessage = {
-                serviceCode: serviceCode,
-                parameters: parameters,
-                transBody: transBody,
-                fee: fee
-            };
+            // Kiểm tra số dư sơ bộ
+            if (transBody['SENDERID']) {
+                const senderPocket = await Pocket.findOne({ id: transBody['SENDERID'] });
+                if (!senderPocket) {
+                    return res.error(RespCode.POCKET_NOT_FOUND);
+                }
+                if ((senderPocket.balance || 0) < totalAmount) {
+                    return res.error(RespCode.INSUFFICIENT_BALANCE);
+                }
+            }
+
+            // Tạo Trail pending
+            const transRefId = 'TXN' + Date.now() + Math.floor(1000 + Math.random() * 9000);
 
             const trail = await TransactionTrail.create({
                 transRefId: transRefId,
-                inputMessage: inputMessage,
+                inputMessage: {
+                    serviceCode: serviceCode,
+                    parameters: parameters,
+                    transBody: transBody,
+                    fee: fee
+                },
                 status: 'pending'
             });
 
@@ -94,6 +270,7 @@ module.exports = {
         }
     },
 
+    // BƯỚC 2 — CONFIRM
     confirm: async function (req, res) {
         try {
             const { transRefId } = req.body;
@@ -118,7 +295,7 @@ module.exports = {
 
             return res.ok({
                 transRefId: trail.transRefId,
-                authMethod: service.auth.method,
+                authMethod: (service.auth && service.auth.method) ? service.auth.method : 'NONE',
                 amount: trail.inputMessage.transBody.AMOUNT,
                 fee: trail.inputMessage.fee || 0
             }, RespCode.CONFIRM_SUCCESS.message);
@@ -129,117 +306,125 @@ module.exports = {
         }
     },
 
+    // BƯỚC 3 — VERIFY
     verify: async function (req, res) {
-        try {
-            const { transRefId, pin } = req.body;
+        const { transRefId, pin } = req.body;
+        let senderPocketId = null;
 
+        try {
             if (!transRefId) {
                 return res.error(RespCode.MISSING_TRANS_REF_ID);
             }
 
+            // Kiểm tra Trail còn pending
             const trail = await TransactionTrail.findOne({ transRefId: transRefId });
             if (!trail) {
                 return res.error(RespCode.TRANSACTION_NOT_FOUND);
             }
-
             if (trail.status !== 'pending') {
                 return res.error(RespCode.INVALID_TRANS_STATE);
             }
 
-            await TransactionTrail.update({ transRefId }, { status: 'inProgress' });
-
             const serviceCode = trail.inputMessage.serviceCode;
-            const transBody = trail.inputMessage.transBody;
+            const transBody = Object.assign({}, trail.inputMessage.transBody);
+            const fee = parseFloat(trail.inputMessage.fee) || 0;
+            const amount = parseFloat(transBody['AMOUNT']) || 0;
 
             const service = await Service.findOne({ code: serviceCode });
+            if (!service) {
+                return res.error(RespCode.SERVICE_UNAVAILABLE);
+            }
+
+            // Xác thực PIN
             if (service.auth && service.auth.method === 'PIN') {
                 if (!pin) {
-                    await TransactionTrail.update({ transRefId }, { status: 'pending' });
                     return res.error(RespCode.MISSING_PIN);
                 }
-
                 if (!/^\d{6}$/.test(pin.toString())) {
-                    await TransactionTrail.update({ transRefId }, { status: 'pending' });
                     return res.error(RespCode.INVALID_PIN_FORMAT);
                 }
 
                 const customer = await Customer.findOne({ phone: req.user.phone });
                 if (!customer) {
-                    await TransactionTrail.update({ transRefId }, { status: 'pending' });
                     return res.error(RespCode.USER_NOT_FOUND);
                 }
 
                 const isPinValid = bcrypt.compareSync(pin.toString(), customer.pinHash);
                 if (!isPinValid) {
-                    await TransactionTrail.update({ transRefId }, { status: 'pending' });
                     return res.error(RespCode.INVALID_OTP);
                 }
             }
 
+            // Lấy glSteps
             const definition = await TransDefinition.findOne({ service: service.id });
-            if (!definition || !definition.glSteps) {
-                throw new Error("Không tìm thấy cấu hình TransDefinition cho dịch vụ này.");
+            if (!definition || !definition.glSteps || !definition.glSteps.length) {
+                throw new Error('Không tìm thấy glSteps cho service: ' + serviceCode);
             }
 
-            if (!transBody['RECEIVERID'] && transBody['RECEIVERPHONE']) {
-                transBody['RECEIVERID'] = 'POCKET_' + transBody['RECEIVERPHONE'];
+            // Khoá ví người gửi (chống double-spend)
+            senderPocketId = transBody['SENDERID'] || null;
+            if (!senderPocketId) {
+                return res.error(RespCode.POCKET_NOT_FOUND);
             }
 
-            if (transBody['SENDERID'] && /^[0-9]{10}$/.test(transBody['SENDERID'])) {
-                transBody['SENDERID'] = 'POCKET_' + transBody['SENDERID'];
+            const locked = await lockPocket(senderPocketId);
+            if (!locked) {
+                // Ví đang bị lock → giao dịch khác đang chạy
+                return res.error(RespCode.INVALID_TRANS_STATE);
+            }
+            await TransactionTrail.update({ transRefId }, { status: 'inProgress' });
+
+            // Re-validate số dư lần 2
+            const senderPocket = await Pocket.findOne({ id: senderPocketId });
+            if (!senderPocket) {
+                await unlockPocket(senderPocketId);
+                await TransactionTrail.update({ transRefId }, { status: 'pending' });
+                return res.error(RespCode.POCKET_NOT_FOUND);
             }
 
+            const requiredTotal = amount + fee;
+            if ((senderPocket.balance || 0) < requiredTotal) {
+                await unlockPocket(senderPocketId);
+                await TransactionTrail.update({ transRefId }, { status: 'pending' });
+                return res.error(RespCode.INSUFFICIENT_BALANCE);
+            }
+
+            // Ghi sổ kép theo glSteps
             let finalTotalAmount = 0;
             let finalFee = 0;
 
-            const updateBalanceNative = (pocketId, amountChange) => {
-                return new Promise((resolve, reject) => {
-                    Pocket.native(function (err, collection) {
-                        if (err) return reject(err);
-                        collection.updateOne(
-                            { id: pocketId },
-                            { $inc: { balance: amountChange } },
-                            function (err, result) {
-                                if (err) return reject(err);
-                                resolve(result);
-                            }
-                        );
-                    });
-                });
-            };
-
             for (const step of definition.glSteps) {
+                // Xác định stepAmount
                 let stepAmount = 0;
                 if (step.amount === 'FEE') {
-                    stepAmount = parseFloat(trail.inputMessage.fee) || 0;
+                    stepAmount = fee;
+                } else if (step.amount === 'AMOUNT') {
+                    stepAmount = amount;
                 } else {
                     stepAmount = parseFloat(transBody[step.amount]) || 0;
                 }
 
                 if (!stepAmount || stepAmount <= 0) continue;
 
-                if (step.amount === 'AMOUNT') finalTotalAmount += stepAmount;
-                if (step.amount === 'FEE') {
-                    finalFee += stepAmount;
-                    finalTotalAmount += stepAmount;
-                }
+                // Xác định pocket nguồn/đích (hỗ trợ cả wallet level)
+                const debitLvl = step.debitLevel || (step.debit && step.debit.level);
+                const debitTgt = step.debitTarget || (step.debit && step.debit.target);
+                const creditLvl = step.creditLevel || (step.credit && step.credit.level);
+                const creditTgt = step.creditTarget || (step.credit && step.credit.target);
 
-                const debitLvl = step.debit ? step.debit.level : step.debitLevel;
-                const debitTgt = step.debit ? step.debit.target : step.debitTarget;
-                const creditLvl = step.credit ? step.credit.level : step.creditLevel;
-                const creditTgt = step.credit ? step.credit.target : step.creditTarget;
+                const debitPocketId = await resolvePocketId(debitLvl, debitTgt, transBody);
+                const creditPocketId = await resolvePocketId(creditLvl, creditTgt, transBody);
 
-                const debitPocketId = debitLvl === 'productLevel' ? transBody[debitTgt] : debitTgt;
-                const creditPocketId = creditLvl === 'productLevel' ? transBody[creditTgt] : creditTgt;
-
+                // Trừ ví nguồn
                 if (debitPocketId) {
-                    await updateBalanceNative(debitPocketId, -Math.abs(stepAmount));
+                    await updatePocketBalance(debitPocketId, -Math.abs(stepAmount));
                 }
-
+                // Cộng ví đích
                 if (creditPocketId) {
-                    await updateBalanceNative(creditPocketId, Math.abs(stepAmount));
+                    await updatePocketBalance(creditPocketId, Math.abs(stepAmount));
                 }
 
+                // Ghi PocketEntry (dấu vết bút toán bất biến)
                 await PocketEntry.create({
                     transRefId: transRefId,
                     stepOrder: step.order,
@@ -248,21 +433,28 @@ module.exports = {
                     amount: stepAmount,
                     status: 'settled'
                 });
+
+                // Cộng dồn tổng
+                finalTotalAmount += stepAmount;
+                if (step.amount === 'FEE') finalFee += stepAmount;
             }
 
+            // Tạo Transaction biên lai
             const transRecord = await Transaction.create({
                 code: transRefId.replace('TXN', 'GD'),
                 transRefId: transRefId,
                 service: service.id,
                 sender: transBody['SENDERID'],
                 receiver: transBody['RECEIVERID'] || transBody['RECEIVERPHONE'],
-                amount: parseFloat(transBody['AMOUNT']),
+                amount: amount,
                 fee: finalFee,
                 totalAmount: finalTotalAmount,
                 status: 'done'
             });
 
+            // Cập nhật Trail done + mở khoá ví
             await TransactionTrail.update({ transRefId }, { status: 'done' });
+            await unlockPocket(senderPocketId);
 
             return res.ok({
                 transactionCode: transRecord.code,
@@ -273,20 +465,27 @@ module.exports = {
 
         } catch (error) {
             console.error('Transaction Verify Error:', error);
-            if (req.body.transRefId) {
-                await TransactionTrail.update({ transRefId: req.body.transRefId }, { status: 'failed' });
-            }
+
+            // Mở khoá ví ở mọi lối ra lỗi
+            if (senderPocketId) await unlockPocket(senderPocketId);
+
+            // Đánh dấu Trail failed
+            try {
+                await TransactionTrail.update({ transRefId: transRefId }, { status: 'failed' });
+            } catch (_) { }
+
             return res.error(RespCode.SYSTEM_ERROR);
         }
     },
 
+    // Lịch sử giao dịch của customer đang đăng nhập
     myHistory: async function (req, res) {
         try {
             const pocketId = req.user.id;
             const phone = req.user.phone;
 
-            const page = parseInt(req.body.page) || 1;
-            const limit = parseInt(req.body.limit) || 10;
+            const page = parseInt(req.query.page || req.body.page) || 1;
+            const limit = parseInt(req.query.limit || req.body.limit) || 10;
             const skip = (page - 1) * limit;
 
             const transactions = await Transaction.find({

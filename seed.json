@@ -156,7 +156,7 @@
           "amount": "AMOUNT",
           "debitLevel": "productLevel",
           "debitTarget": "SENDERID",
-          "creditLevel": "wallet",
+          "creditLevel": "productLevel",
           "creditTarget": "RECEIVERID"
         },
         {
