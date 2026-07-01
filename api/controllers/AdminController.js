@@ -210,6 +210,105 @@ module.exports = {
             }
             return res.error(RespCode.SYSTEM_ERROR);
         }
+    },
+
+    listTransactions: async function (req, res) {
+        try {
+            const page = parseInt(req.query.page) || 1;
+            const limit = parseInt(req.query.limit) || 10;
+            const skip = (page - 1) * limit;
+            
+            const query = {};
+            if (req.query.status) query.status = req.query.status;
+
+            const transactions = await Transaction.find(query).sort('createdAt DESC').skip(skip).limit(limit);
+            const total = await Transaction.count(query);
+
+            return res.ok({
+                page, limit, total,
+                records: transactions
+            }, 'Lấy danh sách giao dịch thành công');
+        } catch (error) {
+            console.error('listTransactions Error:', error);
+            return res.error(RespCode.SYSTEM_ERROR);
+        }
+    },
+
+    listTrails: async function (req, res) {
+        try {
+            const page = parseInt(req.query.page) || 1;
+            const limit = parseInt(req.query.limit) || 10;
+            const skip = (page - 1) * limit;
+
+            const query = {};
+            if (req.query.status) query.status = req.query.status;
+            if (req.query.transRefId) query.transRefId = req.query.transRefId;
+
+            const trails = await TransactionTrail.find(query).sort('createdAt DESC').skip(skip).limit(limit);
+            const total = await TransactionTrail.count(query);
+
+            return res.ok({
+                page, limit, total,
+                records: trails
+            }, 'Lấy danh sách TransactionTrail thành công');
+        } catch (error) {
+            console.error('listTrails Error:', error);
+            return res.error(RespCode.SYSTEM_ERROR);
+        }
+    },
+
+    listCustomers: async function (req, res) {
+        try {
+            const page = parseInt(req.query.page) || 1;
+            const limit = parseInt(req.query.limit) || 10;
+            const skip = (page - 1) * limit;
+
+            const query = {};
+            if (req.query.phone) query.phone = { contains: req.query.phone };
+
+            const customers = await Customer.find(query).sort('createdAt DESC').skip(skip).limit(limit);
+            const total = await Customer.count(query);
+
+            const pocketIds = customers.map(c => c.pocket).filter(id => id);
+            const pockets = await Pocket.find({ id: pocketIds });
+            const pocketMap = {};
+            pockets.forEach(p => pocketMap[p.id] = p.balance);
+
+            const records = customers.map(c => {
+                return {
+                    id: c.id,
+                    phone: c.phone,
+                    pocketId: c.pocket,
+                    balance: pocketMap[c.pocket] !== undefined ? pocketMap[c.pocket] : 0,
+                    createdAt: c.createdAt
+                };
+            });
+
+            return res.ok({
+                page, limit, total,
+                records
+            }, 'Lấy danh sách khách hàng thành công');
+        } catch (error) {
+            console.error('listCustomers Error:', error);
+            return res.error(RespCode.SYSTEM_ERROR);
+        }
+    },
+
+    forceUnlockPocket: async function (req, res) {
+        try {
+            const { pocketId } = req.body;
+            if (!pocketId) return res.error(RespCode.INVALID_PARAMS);
+
+            const pocket = await Pocket.findOne({ id: pocketId });
+            if (!pocket) return res.error(RespCode.POCKET_NOT_FOUND);
+
+            await Pocket.update({ id: pocketId }, { status: 'active' });
+
+            return res.ok({ pocketId }, 'Mở khoá ví thành công');
+        } catch (error) {
+            console.error('forceUnlockPocket Error:', error);
+            return res.error(RespCode.SYSTEM_ERROR);
+        }
     }
 
 };

@@ -41,5 +41,13 @@ module.exports = {
   SERVICE_UNAVAILABLE: { code: 206, message: "Dịch vụ không tồn tại hoặc đang bảo trì" },
   INVALID_TRANS_STATE: { code: 207, message: "Trạng thái giao dịch không hợp lệ (đã xử lý hoặc hết hạn)" },
   INVALID_OTP: { code: 208, message: "Mã xác thực (OTP/PIN) không chính xác" },
-  MISSING_PIN: { code: 209, message: "Thiếu mã PIN xác thực" }
+  MISSING_PIN: { code: 209, message: "Thiếu mã PIN xác thực" },
+
+  // Nhóm lỗi Bill Payment / Biller
+  BILLER_NOT_FOUND: { code: 301, message: "Không tìm thấy nhà cung cấp dịch vụ" },
+  BILL_NOT_FOUND: { code: 302, message: "Không tìm thấy hoá đơn" },
+  BILL_ALREADY_PAID: { code: 303, message: "Hoá đơn đã được thanh toán trước đó" },
+  BILLER_INQUIRY_FAILED: { code: 304, message: "Không trưy vấn được thông tin hoá đơn từ đối tác" },
+  BILLER_PAYMENT_FAILED: { code: 305, message: "Thanh toán thất bại (Biller từ chối). Hệ thống sẽ hoàn tiền" },
+  BILL_PAYMENT_SUCCESS: { code: 200, message: "Thanh toán hoá đơn thành công" }
 };

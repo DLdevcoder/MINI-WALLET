@@ -18,4 +18,10 @@ module.exports.policies = {
   AdminController: {
     '*': 'isOfficer'
   },
-};
+
+  // Mock Biller: public endpoint, không cần auth (giả lập biller bên ngoài)
+  MockBillerController: {
+    '*': true
+  }
+};
+

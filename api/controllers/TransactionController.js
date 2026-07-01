@@ -176,6 +176,12 @@ module.exports = {
                         } else {
                             transBody[name] = null;
                         }
+                    } else if (source === 'queryBillerPocket') {
+                        // Tra Biller theo billerCode trong parameters, lấy pocket ID
+                        const billerCode = parameters['billerCode'] || 'EVN';
+                        const biller = await Biller.findOne({ billerCode: String(billerCode) });
+                        transBody[name] = biller ? biller.pocket : null;
+                        transBody['BILLER_CODE'] = billerCode; // lưu billerCode để dùng sau
                     } else {
                         transBody[name] = null;
                     }
@@ -189,6 +195,59 @@ module.exports = {
 
             // Validate định dạng (TransField)
             const transFields = await TransField.find({ service: service.id });
+
+            // Gọi Inquiry nếu là billerTrans (TRƯỚC khi validate AMOUNT)
+            if (service.action === 'billerTrans') {
+                const billCode = transBody['BILLCODE'];
+                const receiverId = transBody['RECEIVERID'];
+
+                if (!billCode) {
+                    return res.error(RespCode.MISS_INFO);
+                }
+
+                // Tra Biller để lấy inquiryUrl
+                const biller = await Biller.findOne({ pocket: receiverId });
+                if (!biller) {
+                    // Thử tra theo billerCode từ RECEIVERID (fallback)
+                    return res.error(RespCode.BILLER_NOT_FOUND);
+                }
+
+                // Gọi Mock Biller Inquiry (HTTP GET nội bộ)
+                let inquiryResult;
+                try {
+                    const http = require('http');
+                    const inquiryUrl = new URL(biller.inquiryUrl + '?billCode=' + encodeURIComponent(billCode));
+                    inquiryResult = await new Promise((resolve, reject) => {
+                        http.get({
+                            hostname: inquiryUrl.hostname,
+                            port: inquiryUrl.port || 80,
+                            path: inquiryUrl.pathname + inquiryUrl.search,
+                            timeout: 5000
+                        }, (resp) => {
+                            let data = '';
+                            resp.on('data', chunk => { data += chunk; });
+                            resp.on('end', () => {
+                                try { resolve(JSON.parse(data)); }
+                                catch (e) { reject(new Error('Invalid biller response')); }
+                            });
+                        }).on('error', reject).on('timeout', () => reject(new Error('Inquiry timeout')));
+                    });
+                } catch (e) {
+                    console.error('[BillPayment] Inquiry failed:', e.message);
+                    return res.error(RespCode.BILLER_INQUIRY_FAILED);
+                }
+
+                if (!inquiryResult.success) {
+                    if (inquiryResult.error === 'BILL_NOT_FOUND') return res.error(RespCode.BILL_NOT_FOUND);
+                    if (inquiryResult.error === 'BILL_ALREADY_PAID') return res.error(RespCode.BILL_ALREADY_PAID);
+                    return res.error(RespCode.BILLER_INQUIRY_FAILED);
+                }
+
+                // Ghi đè AMOUNT từ kết quả inquiry (khách không tự nhập)
+                transBody['AMOUNT'] = inquiryResult.amount;
+                transBody['BILLER_ID'] = biller.id; // lưu để dùng ở Verify
+                console.log(`[BillPayment] Inquiry OK: billCode=${billCode}, amount=${inquiryResult.amount}`);
+            }
 
             for (const tf of transFields) {
                 const val = transBody[tf.fieldName];
@@ -316,17 +375,37 @@ module.exports = {
                 return res.error(RespCode.MISSING_TRANS_REF_ID);
             }
 
-            // Kiểm tra Trail còn pending
+            // Kiểm tra trạng thái Trail
             const trail = await TransactionTrail.findOne({ transRefId: transRefId });
             if (!trail) {
                 return res.error(RespCode.TRANSACTION_NOT_FOUND);
             }
+
+            const transBody = Object.assign({}, trail.inputMessage.transBody);
+
+            // ==========================================
+            // IDEMPOTENCY CATCH: Xử lý client retry
+            // ==========================================
+            if (trail.status === 'done') {
+                const existingTrans = await Transaction.findOne({ transRefId: transRefId });
+                if (existingTrans) {
+                    console.log(`[Idempotency] Client retry transRefId=${transRefId}. Trả lại response cũ.`);
+                    return res.ok({
+                        transactionCode: existingTrans.code,
+                        billCode: transBody['BILLCODE'] || undefined,
+                        amount: existingTrans.amount,
+                        fee: existingTrans.fee,
+                        totalAmount: existingTrans.totalAmount,
+                        note: 'IDEMPOTENT_RESPONSE'
+                    }, RespCode.TRANSACTION_SUCCESS.message);
+                }
+            }
+
             if (trail.status !== 'pending') {
                 return res.error(RespCode.INVALID_TRANS_STATE);
             }
 
             const serviceCode = trail.inputMessage.serviceCode;
-            const transBody = Object.assign({}, trail.inputMessage.transBody);
             const fee = parseFloat(trail.inputMessage.fee) || 0;
             const amount = parseFloat(transBody['AMOUNT']) || 0;
 
@@ -455,6 +534,71 @@ module.exports = {
             // Cập nhật Trail done + mở khoá ví
             await TransactionTrail.update({ transRefId }, { status: 'done' });
             await unlockPocket(senderPocketId);
+
+            // Nếu là billerTrans → gọi payment SAU KHI đã ghi sổ (thu tiền trước)
+            if (service.action === 'billerTrans') {
+                const billCode = transBody['BILLCODE'];
+                const biller = await Biller.findOne({ pocket: transBody['RECEIVERID'] });
+
+                let paymentSuccess = false;
+                if (biller && billCode) {
+                    try {
+                        const http = require('http');
+                        const paymentUrl = new URL(biller.paymentUrl);
+                        const postBody = JSON.stringify({
+                            transRefId: transRefId,
+                            billCode: billCode,
+                            amount: amount
+                        });
+                        paymentSuccess = await new Promise((resolve) => {
+                            const reqOpt = {
+                                hostname: paymentUrl.hostname,
+                                port: paymentUrl.port || 80,
+                                path: paymentUrl.pathname,
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Content-Length': Buffer.byteLength(postBody)
+                                },
+                                timeout: 5000
+                            };
+                            const httpReq = http.request(reqOpt, (resp) => {
+                                let data = '';
+                                resp.on('data', chunk => { data += chunk; });
+                                resp.on('end', () => {
+                                    try {
+                                        const result = JSON.parse(data);
+                                        resolve(result.success === true);
+                                    } catch (e) { resolve(false); }
+                                });
+                            });
+                            httpReq.on('error', () => resolve(false));
+                            httpReq.on('timeout', () => { httpReq.destroy(); resolve(false); });
+                            httpReq.write(postBody);
+                            httpReq.end();
+                        });
+                    } catch (e) {
+                        console.error('[BillPayment] Payment call failed:', e.message);
+                        paymentSuccess = false;
+                    }
+                }
+
+                if (!paymentSuccess) {
+                    // Biller thất bại sau khi đã thu tiền → đánh dấu refund_pending
+                    await TransactionTrail.update({ transRefId }, { status: 'refund_pending' });
+                    console.warn(`[BillPayment] Biller từ chối/timeout. Trail=${transRefId} → refund_pending`);
+                    return res.error(RespCode.BILLER_PAYMENT_FAILED);
+                }
+
+                console.log(`[BillPayment] Payment OK: transRefId=${transRefId}`);
+                return res.ok({
+                    transactionCode: transRecord.code,
+                    billCode: billCode,
+                    amount: transRecord.amount,
+                    fee: transRecord.fee,
+                    totalAmount: transRecord.totalAmount
+                }, RespCode.BILL_PAYMENT_SUCCESS.message);
+            }
 
             return res.ok({
                 transactionCode: transRecord.code,
