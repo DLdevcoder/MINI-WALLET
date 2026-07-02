@@ -9,6 +9,7 @@ module.exports = {
   CASH_IN_SUCCESS: { code: 200, message: "Nạp tiền thành công" },
   GET_HISTORY_SUCCESS: { code: 200, message: "Lấy lịch sử giao dịch thành công" },
   GET_POCKET_SUCCESS: { code: 200, message: "Tra cứu số dư thành công" },
+  BATCH_SUCCESS: { code: 200, message: "Chuyển tiền lô thành công" },
 
   // Nhóm lỗi chung (hệ thống, dữ liệu)
   INVALID_PARAMS: { code: 400, message: "Thiếu hoặc sai dữ liệu" },
@@ -42,6 +43,7 @@ module.exports = {
   INVALID_TRANS_STATE: { code: 207, message: "Trạng thái giao dịch không hợp lệ (đã xử lý hoặc hết hạn)" },
   INVALID_OTP: { code: 208, message: "Mã xác thực (OTP/PIN) không chính xác" },
   MISSING_PIN: { code: 209, message: "Thiếu mã PIN xác thực" },
+  BATCH_LIMIT_EXCEEDED: { code: 210, message: "Số lượng giao dịch vượt quá giới hạn" },
 
   // Nhóm lỗi Bill Payment / Biller
   BILLER_NOT_FOUND: { code: 301, message: "Không tìm thấy nhà cung cấp dịch vụ" },

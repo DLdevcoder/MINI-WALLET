@@ -11,6 +11,10 @@ module.exports.policies = {
     '*': 'isAuthorized'
   },
 
+  BatchController: {
+    '*': 'isAuthorized'
+  },
+
   PocketController: {
     '*': 'isAuthorized'
   },

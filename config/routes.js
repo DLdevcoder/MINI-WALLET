@@ -3,6 +3,7 @@ module.exports.routes = {
   'POST /transaction/request': 'TransactionController.request',
   'POST /transaction/confirm': 'TransactionController.confirm',
   'POST /transaction/verify': 'TransactionController.verify',
+  'POST /transaction/batch-payout': 'BatchController.payout',
 
   // Auth
   'POST /auth/customer/register': 'AuthController.registerCustomer',
