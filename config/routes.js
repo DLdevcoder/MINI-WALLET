@@ -19,6 +19,7 @@ module.exports.routes = {
   'GET /admin/transactions': 'AdminController.listTransactions',
   'GET /admin/trails': 'AdminController.listTrails',
   'GET /admin/customers': 'AdminController.listCustomers',
+  'GET /admin/pocket-entries': 'AdminController.listPocketEntries',
   'POST /admin/pocket/unlock': 'AdminController.forceUnlockPocket',
 
   // Mock Biller (giả lập hệ thống đối tác bên ngoài)

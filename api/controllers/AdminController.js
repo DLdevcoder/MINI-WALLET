@@ -1,4 +1,5 @@
 const RespCode = require('../services/Respcode');
+const ChecksumService = require('../services/ChecksumService');
 
 async function resolvePocketId(level, target, transBody) {
     if (level === 'wallet') {
@@ -22,12 +23,27 @@ function updateBalanceNative(pocketId, amountChange) {
                 query = { _id: pocketId };
             }
 
-            collection.updateOne(
+            collection.findOneAndUpdate(
                 query,
                 { $inc: { balance: amountChange } },
+                { returnOriginal: false, returnDocument: 'after' },
                 function (err2, result) {
                     if (err2) return reject(err2);
-                    resolve(result);
+                    
+                    const doc = result.value || result;
+                    if (!doc) return reject(new Error('Pocket not found'));
+
+                    const newBalance = doc.balance;
+                    const newChecksum = ChecksumService.compute(newBalance, doc._id.toString());
+
+                    collection.updateOne(
+                        query,
+                        { $set: { checksum: newChecksum } },
+                        function (err3) {
+                            if (err3) return reject(err3);
+                            resolve(doc);
+                        }
+                    );
                 }
             );
         });
@@ -103,6 +119,12 @@ module.exports = {
             if (!bankPocket) {
                 return res.error(RespCode.POCKET_NOT_FOUND);
             }
+
+            // [CHECKSUM ENFORCEMENT] Kiểm tra toàn vẹn ví ngân hàng
+            if (!ChecksumService.verify(bankPocket)) {
+                return res.error(RespCode.DATA_INTEGRITY_ERROR);
+            }
+
             if (bankPocket.balance < parsedAmount + fee) {
                 return res.error(RespCode.INSUFFICIENT_BALANCE);
             }
@@ -307,6 +329,37 @@ module.exports = {
             return res.ok({ pocketId }, 'Mở khoá ví thành công');
         } catch (error) {
             console.error('forceUnlockPocket Error:', error);
+            return res.error(RespCode.SYSTEM_ERROR);
+        }
+    },
+
+    // GET /admin/pocket-entries — Tra cứu dấu vết từng bút toán (double-entry ledger)
+    // Có thể lọc theo transRefId: ?transRefId=TXN1234
+    listPocketEntries: async function (req, res) {
+        try {
+            const page  = parseInt(req.query.page)  || 1;
+            const limit = parseInt(req.query.limit) || 20;
+            const skip  = (page - 1) * limit;
+
+            const query = {};
+            if (req.query.transRefId) query.transRefId = req.query.transRefId;
+            if (req.query.debit)      query.debit      = req.query.debit;
+            if (req.query.credit)     query.credit     = req.query.credit;
+
+            const entries = await PocketEntry.find(query)
+                .sort('createdAt DESC')
+                .skip(skip)
+                .limit(limit);
+
+            const total = await PocketEntry.count(query);
+
+            return res.ok({
+                page, limit, total,
+                records: entries
+            }, 'Lấy danh sách bút toán thành công');
+
+        } catch (error) {
+            console.error('listPocketEntries Error:', error);
             return res.error(RespCode.SYSTEM_ERROR);
         }
     }

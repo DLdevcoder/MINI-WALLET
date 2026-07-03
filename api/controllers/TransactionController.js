@@ -1,12 +1,7 @@
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const RespCode = require('../services/Respcode');
-// Tính checksum bảo vệ số dư ví
-function computeChecksum(balance, pocketId) {
-    return crypto.createHash('sha256')
-        .update(`${balance}|${pocketId}`)
-        .digest('hex');
-}
+const ChecksumService = require('../services/ChecksumService');
 
 // Dùng native MongoDB để $inc balance + cập nhật checksum cùng lúc
 function updatePocketBalance(pocketId, amountChange) {
@@ -38,7 +33,7 @@ function updatePocketBalance(pocketId, amountChange) {
                     }
 
                     const newBalance = doc.balance;
-                    const newChecksum = computeChecksum(newBalance, pocketId);
+                    const newChecksum = ChecksumService.compute(newBalance, pocketId);
 
                     collection.updateOne(
                         { _id: objectId },
@@ -296,6 +291,12 @@ module.exports = {
                 if (!senderPocket) {
                     return res.error(RespCode.POCKET_NOT_FOUND);
                 }
+                
+                // [CHECKSUM ENFORCEMENT] Kiểm tra toàn vẹn dữ liệu
+                if (!ChecksumService.verify(senderPocket)) {
+                    return res.error(RespCode.DATA_INTEGRITY_ERROR);
+                }
+
                 if ((senderPocket.balance || 0) < totalAmount) {
                     return res.error(RespCode.INSUFFICIENT_BALANCE);
                 }

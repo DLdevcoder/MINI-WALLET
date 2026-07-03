@@ -2,12 +2,7 @@ const RespCode = require('../services/Respcode');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 
-// Tính checksum bảo vệ số dư ví
-function computeChecksum(balance, pocketId) {
-    return crypto.createHash('sha256')
-        .update(`${balance}|${pocketId}`)
-        .digest('hex');
-}
+const ChecksumService = require('../services/ChecksumService');
 
 function lockPocket(pocketId) {
     return new Promise((resolve, reject) => {
@@ -37,7 +32,7 @@ function lockPocket(pocketId) {
 }
 
 function unlockPocket(pocketId) {
-    return Pocket.update({ id: pocketId }, { status: 'active' }).catch(() => {});
+    return Pocket.update({ id: pocketId }, { status: 'active' }).catch(() => { });
 }
 
 function updatePocketBalance(pocketId, amountChange) {
@@ -67,7 +62,7 @@ function updatePocketBalance(pocketId, amountChange) {
                     }
 
                     const newBalance = doc.balance;
-                    const newChecksum = computeChecksum(newBalance, pocketId);
+                    const newChecksum = ChecksumService.compute(newBalance, pocketId);
 
                     collection.updateOne(
                         { _id: objectId },
@@ -91,7 +86,7 @@ module.exports = {
 
         try {
             const { pin, transactions } = req.body;
-            
+
             if (!transactions || !Array.isArray(transactions) || transactions.length === 0) {
                 return res.error(RespCode.INVALID_PARAMS);
             }
@@ -120,7 +115,7 @@ module.exports = {
                     continue; // Bỏ qua dòng lỗi
                 }
                 const amt = parseFloat(t.amount);
-                
+
                 // Tra cứu receiver
                 const receiver = await Customer.findOne({ phone: String(t.receiverPhone) });
                 if (receiver && String(receiver.pocket) !== String(merchantPocketId)) {
@@ -138,34 +133,51 @@ module.exports = {
             }
 
             // 3. Khoá ví Merchant (chỉ 1 lần duy nhất)
+            const merchantPocket = await Pocket.findOne({ id: merchantPocketId });
+            if (!merchantPocket) {
+                return res.error(RespCode.POCKET_NOT_FOUND);
+            }
+
+            // [CHECKSUM ENFORCEMENT] Kiểm tra toàn vẹn ví merchant
+            if (!ChecksumService.verify(merchantPocket)) {
+                return res.error(RespCode.DATA_INTEGRITY_ERROR);
+            }
+
             const locked = await lockPocket(merchantPocketId);
             if (!locked) {
                 return res.error(RespCode.INVALID_TRANS_STATE);
             }
 
             // 4. Kiểm tra số dư tổng
-            const merchantPocket = await Pocket.findOne({ id: merchantPocketId });
             if ((merchantPocket.balance || 0) < totalAmount) {
                 await unlockPocket(merchantPocketId);
                 return res.error(RespCode.INSUFFICIENT_BALANCE);
             }
 
-            // 5. Trừ tổng tiền Merchant
+            // 5. Trừ tổng tiền Merchant + ghi PocketEntry tổng (debit phía Merchant)
             await updatePocketBalance(merchantPocketId, -totalAmount);
 
-            // Lấy service ID cho Transaction record
+            await PocketEntry.create({
+                transRefId: transRefId,
+                stepOrder: 0,
+                debit: merchantPocketId,
+                credit: null,
+                amount: totalAmount,
+                status: 'settled'
+            });
             let p2pService = await Service.findOne({ code: 'P2P_TRANSFER' });
             let serviceId = p2pService ? p2pService.id : null;
 
             // 6. Cộng tiền hàng loạt cho Receiver
             const successRecords = [];
-            for (const t of validTransactions) {
+            for (let i = 0; i < validTransactions.length; i++) {
+                const t = validTransactions[i];
                 try {
                     const code = 'GD' + Date.now() + Math.floor(100 + Math.random() * 900);
                     const transRecord = await Transaction.create({
                         code: code,
                         transRefId: transRefId,
-                        service: serviceId, // Dùng service hợp lệ để qua validation
+                        service: serviceId,
                         sender: merchantPocketId,
                         receiver: t.receiverPocket,
                         amount: t.amount,
@@ -174,9 +186,19 @@ module.exports = {
                         status: 'done'
                     });
 
-                    // Cộng tiền chỉ khi tạo Transaction record thành công
+                    // Cộng tiền cho Receiver
                     await updatePocketBalance(t.receiverPocket, t.amount);
-                    
+
+                    // Bút toán credit: merchant → receiver (từng dòng rõ ràng)
+                    await PocketEntry.create({
+                        transRefId: transRefId,
+                        stepOrder: i + 1,
+                        debit: merchantPocketId,
+                        credit: t.receiverPocket,
+                        amount: t.amount,
+                        status: 'settled'
+                    });
+
                     successRecords.push({
                         receiverPhone: t.receiverPhone,
                         amount: t.amount,

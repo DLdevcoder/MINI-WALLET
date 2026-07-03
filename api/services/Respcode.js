@@ -21,6 +21,7 @@ module.exports = {
   NOT_FOUND: { code: 404, message: "Không tìm thấy dữ liệu yêu cầu" },
   TRANSACTION_NOT_FOUND: { code: 404, message: "Không tìm thấy giao dịch" },
   SYSTEM_ERROR: { code: 500, message: "Lỗi hệ thống nội bộ" },
+  DATA_INTEGRITY_ERROR: { code: 501, message: "Dữ liệu ví đã bị can thiệp trái phép (Checksum bất hợp lệ)" },
 
   // Nhóm lỗi người dùng / tài khoản
   PHONE_EXISTED: { code: 101, message: "Số điện thoại đã được đăng ký" },
