@@ -629,11 +629,11 @@ module.exports = {
             const pocketId = req.user.id;
             const phone = req.user.phone;
 
-            const page = parseInt(req.query.page || req.body.page) || 1;
-            const limit = parseInt(req.query.limit || req.body.limit) || 10;
+            const page = parseInt((req.query && req.query.page) || (req.body && req.body.page)) || 1;
+            const limit = parseInt((req.query && req.query.limit) || (req.body && req.body.limit)) || 10;
             const skip = (page - 1) * limit;
 
-            const transactions = await Transaction.find({
+            let query = {
                 or: [
                     { sender: pocketId },
                     { sender: phone },
@@ -641,19 +641,90 @@ module.exports = {
                     { receiver: phone }
                 ],
                 status: 'done'
-            })
+            };
+
+            // Lọc theo service (VD: P2P_TRANSFER, BILL_PAYMENT)
+            if (req.query.service) {
+                query.service = req.query.service;
+            }
+
+            // Lọc theo thời gian
+            if (req.query.fromDate || req.query.toDate) {
+                query.createdAt = {};
+                if (req.query.fromDate) query.createdAt['>='] = new Date(req.query.fromDate);
+                if (req.query.toDate) query.createdAt['<='] = new Date(req.query.toDate);
+            }
+
+            const transactions = await Transaction.find(query)
                 .sort('createdAt DESC')
                 .skip(skip)
                 .limit(limit);
 
+            const total = await Transaction.count(query);
+
+            // Bổ sung cờ đánh dấu đây là giao dịch TIỀN VÀO hay TIỀN RA
+            const formattedRecords = transactions.map(t => {
+                let type = 'OUT';
+                if (t.receiver === pocketId || t.receiver === phone) {
+                    type = 'IN';
+                }
+                return {
+                    ...t,
+                    type: type // 'IN' (nhận tiền) hoặc 'OUT' (chuyển tiền/thanh toán)
+                };
+            });
+
             return res.ok({
                 page: page,
                 limit: limit,
-                records: transactions
+                total: total,
+                records: formattedRecords
             }, RespCode.GET_HISTORY_SUCCESS.message);
 
         } catch (error) {
             console.error('Get My History Error:', error);
+            return res.error(RespCode.SYSTEM_ERROR);
+        }
+    },
+
+    // Xem chi tiết 1 giao dịch của chính mình
+    myTransactionDetail: async function (req, res) {
+        try {
+            const pocketId = req.user.id;
+            const phone = req.user.phone;
+            const transId = req.params.id;
+
+            if (!transId) {
+                return res.error(RespCode.INVALID_PARAMS);
+            }
+
+            const transaction = await Transaction.findOne({ id: transId });
+            
+            if (!transaction) {
+                return res.error(RespCode.TRANSACTION_NOT_FOUND);
+            }
+
+            // Bảo mật: Đảm bảo giao dịch này thuộc về người dùng đang đăng nhập
+            if (transaction.sender !== pocketId && transaction.sender !== phone &&
+                transaction.receiver !== pocketId && transaction.receiver !== phone) {
+                return res.error(RespCode.TRANSACTION_NOT_FOUND); // Trả về NOT_FOUND để che giấu
+            }
+
+            let type = (transaction.receiver === pocketId || transaction.receiver === phone) ? 'IN' : 'OUT';
+
+            // Có thể lấy thêm Trail để xem chi tiết
+            const trail = await TransactionTrail.findOne({ transRefId: transaction.transRefId });
+
+            return res.ok({
+                transaction: {
+                    ...transaction,
+                    type: type
+                },
+                details: trail ? trail.inputMessage : null
+            }, "Lấy chi tiết giao dịch thành công");
+
+        } catch (error) {
+            console.error('Get Transaction Detail Error:', error);
             return res.error(RespCode.SYSTEM_ERROR);
         }
     }

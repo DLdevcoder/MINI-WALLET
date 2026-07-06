@@ -11,8 +11,10 @@ module.exports.routes = {
   'POST /auth/admin/login': 'AuthController.loginAdmin',
 
   // Customer
-  'POST /pockets/me': 'PocketController.myPocket',
-  'POST /transactions/me': 'TransactionController.myHistory',
+  'GET /pockets/me': 'PocketController.myPocket',
+  'POST /pockets/me': 'PocketController.myPocket', // Giữ lại POST để tương thích cũ
+  'GET /transactions/me': 'TransactionController.myHistory',
+  'GET /transactions/me/:id': 'TransactionController.myTransactionDetail',
 
   // Admin
   'POST /admin/cash-in': 'AdminController.cashIn',
