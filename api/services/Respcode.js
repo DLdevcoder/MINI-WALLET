@@ -9,6 +9,7 @@ module.exports = {
   CASH_IN_SUCCESS: { code: 200, message: "Nạp tiền thành công" },
   GET_HISTORY_SUCCESS: { code: 200, message: "Lấy lịch sử giao dịch thành công" },
   GET_POCKET_SUCCESS: { code: 200, message: "Tra cứu số dư thành công" },
+  BATCH_SUCCESS: { code: 200, message: "Chuyển tiền lô thành công" },
 
   // Nhóm lỗi chung (hệ thống, dữ liệu)
   INVALID_PARAMS: { code: 400, message: "Thiếu hoặc sai dữ liệu" },
@@ -20,6 +21,7 @@ module.exports = {
   NOT_FOUND: { code: 404, message: "Không tìm thấy dữ liệu yêu cầu" },
   TRANSACTION_NOT_FOUND: { code: 404, message: "Không tìm thấy giao dịch" },
   SYSTEM_ERROR: { code: 500, message: "Lỗi hệ thống nội bộ" },
+  DATA_INTEGRITY_ERROR: { code: 501, message: "Dữ liệu ví đã bị can thiệp trái phép (Checksum bất hợp lệ)" },
 
   // Nhóm lỗi người dùng / tài khoản
   PHONE_EXISTED: { code: 101, message: "Số điện thoại đã được đăng ký" },
@@ -41,5 +43,14 @@ module.exports = {
   SERVICE_UNAVAILABLE: { code: 206, message: "Dịch vụ không tồn tại hoặc đang bảo trì" },
   INVALID_TRANS_STATE: { code: 207, message: "Trạng thái giao dịch không hợp lệ (đã xử lý hoặc hết hạn)" },
   INVALID_OTP: { code: 208, message: "Mã xác thực (OTP/PIN) không chính xác" },
-  MISSING_PIN: { code: 209, message: "Thiếu mã PIN xác thực" }
+  MISSING_PIN: { code: 209, message: "Thiếu mã PIN xác thực" },
+  BATCH_LIMIT_EXCEEDED: { code: 210, message: "Số lượng giao dịch vượt quá giới hạn" },
+
+  // Nhóm lỗi Bill Payment / Biller
+  BILLER_NOT_FOUND: { code: 301, message: "Không tìm thấy nhà cung cấp dịch vụ" },
+  BILL_NOT_FOUND: { code: 302, message: "Không tìm thấy hoá đơn" },
+  BILL_ALREADY_PAID: { code: 303, message: "Hoá đơn đã được thanh toán trước đó" },
+  BILLER_INQUIRY_FAILED: { code: 304, message: "Không trưy vấn được thông tin hoá đơn từ đối tác" },
+  BILLER_PAYMENT_FAILED: { code: 305, message: "Thanh toán thất bại (Biller từ chối). Hệ thống sẽ hoàn tiền" },
+  BILL_PAYMENT_SUCCESS: { code: 200, message: "Thanh toán hoá đơn thành công" }
 };

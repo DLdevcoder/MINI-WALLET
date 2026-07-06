@@ -1,12 +1,7 @@
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const RespCode = require('../services/Respcode');
-// Tính checksum bảo vệ số dư ví
-function computeChecksum(balance, pocketId) {
-    return crypto.createHash('sha256')
-        .update(`${balance}|${pocketId}`)
-        .digest('hex');
-}
+const ChecksumService = require('../services/ChecksumService');
 
 // Dùng native MongoDB để $inc balance + cập nhật checksum cùng lúc
 function updatePocketBalance(pocketId, amountChange) {
@@ -38,7 +33,7 @@ function updatePocketBalance(pocketId, amountChange) {
                     }
 
                     const newBalance = doc.balance;
-                    const newChecksum = computeChecksum(newBalance, pocketId);
+                    const newChecksum = ChecksumService.compute(newBalance, pocketId);
 
                     collection.updateOne(
                         { _id: objectId },
@@ -176,6 +171,12 @@ module.exports = {
                         } else {
                             transBody[name] = null;
                         }
+                    } else if (source === 'queryBillerPocket') {
+                        // Tra Biller theo billerCode trong parameters, lấy pocket ID
+                        const billerCode = parameters['billerCode'] || 'EVN';
+                        const biller = await Biller.findOne({ billerCode: String(billerCode) });
+                        transBody[name] = biller ? biller.pocket : null;
+                        transBody['BILLER_CODE'] = billerCode; // lưu billerCode để dùng sau
                     } else {
                         transBody[name] = null;
                     }
@@ -189,6 +190,59 @@ module.exports = {
 
             // Validate định dạng (TransField)
             const transFields = await TransField.find({ service: service.id });
+
+            // Gọi Inquiry nếu là billerTrans (TRƯỚC khi validate AMOUNT)
+            if (service.action === 'billerTrans') {
+                const billCode = transBody['BILLCODE'];
+                const receiverId = transBody['RECEIVERID'];
+
+                if (!billCode) {
+                    return res.error(RespCode.MISS_INFO);
+                }
+
+                // Tra Biller để lấy inquiryUrl
+                const biller = await Biller.findOne({ pocket: receiverId });
+                if (!biller) {
+                    // Thử tra theo billerCode từ RECEIVERID (fallback)
+                    return res.error(RespCode.BILLER_NOT_FOUND);
+                }
+
+                // Gọi Mock Biller Inquiry (HTTP GET nội bộ)
+                let inquiryResult;
+                try {
+                    const http = require('http');
+                    const inquiryUrl = new URL(biller.inquiryUrl + '?billCode=' + encodeURIComponent(billCode));
+                    inquiryResult = await new Promise((resolve, reject) => {
+                        http.get({
+                            hostname: inquiryUrl.hostname,
+                            port: inquiryUrl.port || 80,
+                            path: inquiryUrl.pathname + inquiryUrl.search,
+                            timeout: 5000
+                        }, (resp) => {
+                            let data = '';
+                            resp.on('data', chunk => { data += chunk; });
+                            resp.on('end', () => {
+                                try { resolve(JSON.parse(data)); }
+                                catch (e) { reject(new Error('Invalid biller response')); }
+                            });
+                        }).on('error', reject).on('timeout', () => reject(new Error('Inquiry timeout')));
+                    });
+                } catch (e) {
+                    console.error('[BillPayment] Inquiry failed:', e.message);
+                    return res.error(RespCode.BILLER_INQUIRY_FAILED);
+                }
+
+                if (!inquiryResult.success) {
+                    if (inquiryResult.error === 'BILL_NOT_FOUND') return res.error(RespCode.BILL_NOT_FOUND);
+                    if (inquiryResult.error === 'BILL_ALREADY_PAID') return res.error(RespCode.BILL_ALREADY_PAID);
+                    return res.error(RespCode.BILLER_INQUIRY_FAILED);
+                }
+
+                // Ghi đè AMOUNT từ kết quả inquiry (khách không tự nhập)
+                transBody['AMOUNT'] = inquiryResult.amount;
+                transBody['BILLER_ID'] = biller.id; // lưu để dùng ở Verify
+                console.log(`[BillPayment] Inquiry OK: billCode=${billCode}, amount=${inquiryResult.amount}`);
+            }
 
             for (const tf of transFields) {
                 const val = transBody[tf.fieldName];
@@ -237,6 +291,12 @@ module.exports = {
                 if (!senderPocket) {
                     return res.error(RespCode.POCKET_NOT_FOUND);
                 }
+                
+                // [CHECKSUM ENFORCEMENT] Kiểm tra toàn vẹn dữ liệu
+                if (!ChecksumService.verify(senderPocket)) {
+                    return res.error(RespCode.DATA_INTEGRITY_ERROR);
+                }
+
                 if ((senderPocket.balance || 0) < totalAmount) {
                     return res.error(RespCode.INSUFFICIENT_BALANCE);
                 }
@@ -316,17 +376,37 @@ module.exports = {
                 return res.error(RespCode.MISSING_TRANS_REF_ID);
             }
 
-            // Kiểm tra Trail còn pending
+            // Kiểm tra trạng thái Trail
             const trail = await TransactionTrail.findOne({ transRefId: transRefId });
             if (!trail) {
                 return res.error(RespCode.TRANSACTION_NOT_FOUND);
             }
+
+            const transBody = Object.assign({}, trail.inputMessage.transBody);
+
+            // ==========================================
+            // IDEMPOTENCY CATCH: Xử lý client retry
+            // ==========================================
+            if (trail.status === 'done') {
+                const existingTrans = await Transaction.findOne({ transRefId: transRefId });
+                if (existingTrans) {
+                    console.log(`[Idempotency] Client retry transRefId=${transRefId}. Trả lại response cũ.`);
+                    return res.ok({
+                        transactionCode: existingTrans.code,
+                        billCode: transBody['BILLCODE'] || undefined,
+                        amount: existingTrans.amount,
+                        fee: existingTrans.fee,
+                        totalAmount: existingTrans.totalAmount,
+                        note: 'IDEMPOTENT_RESPONSE'
+                    }, RespCode.TRANSACTION_SUCCESS.message);
+                }
+            }
+
             if (trail.status !== 'pending') {
                 return res.error(RespCode.INVALID_TRANS_STATE);
             }
 
             const serviceCode = trail.inputMessage.serviceCode;
-            const transBody = Object.assign({}, trail.inputMessage.transBody);
             const fee = parseFloat(trail.inputMessage.fee) || 0;
             const amount = parseFloat(transBody['AMOUNT']) || 0;
 
@@ -348,10 +428,31 @@ module.exports = {
                 if (!customer) {
                     return res.error(RespCode.USER_NOT_FOUND);
                 }
+                
+                if (customer.status !== 'active') {
+                    return res.error(RespCode.ACCOUNT_LOCKED);
+                }
 
                 const isPinValid = bcrypt.compareSync(pin.toString(), customer.pinHash);
                 if (!isPinValid) {
+                    let attempts = (customer.failedPinAttempts || 0) + 1;
+                    let newStatus = customer.status;
+
+                    if (attempts >= 5) {
+                        newStatus = 'locked';
+                    }
+                    
+                    await Customer.update({ id: customer.id }, { failedPinAttempts: attempts, status: newStatus });
+                    
+                    if (newStatus === 'locked') {
+                        return res.error(RespCode.ACCOUNT_LOCKED);
+                    }
                     return res.error(RespCode.INVALID_OTP);
+                }
+
+                // Xác thực PIN thành công -> Reset số lần sai PIN
+                if (customer.failedPinAttempts > 0) {
+                    await Customer.update({ id: customer.id }, { failedPinAttempts: 0 });
                 }
             }
 
@@ -456,6 +557,71 @@ module.exports = {
             await TransactionTrail.update({ transRefId }, { status: 'done' });
             await unlockPocket(senderPocketId);
 
+            // Nếu là billerTrans → gọi payment SAU KHI đã ghi sổ (thu tiền trước)
+            if (service.action === 'billerTrans') {
+                const billCode = transBody['BILLCODE'];
+                const biller = await Biller.findOne({ pocket: transBody['RECEIVERID'] });
+
+                let paymentSuccess = false;
+                if (biller && billCode) {
+                    try {
+                        const http = require('http');
+                        const paymentUrl = new URL(biller.paymentUrl);
+                        const postBody = JSON.stringify({
+                            transRefId: transRefId,
+                            billCode: billCode,
+                            amount: amount
+                        });
+                        paymentSuccess = await new Promise((resolve) => {
+                            const reqOpt = {
+                                hostname: paymentUrl.hostname,
+                                port: paymentUrl.port || 80,
+                                path: paymentUrl.pathname,
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Content-Length': Buffer.byteLength(postBody)
+                                },
+                                timeout: 5000
+                            };
+                            const httpReq = http.request(reqOpt, (resp) => {
+                                let data = '';
+                                resp.on('data', chunk => { data += chunk; });
+                                resp.on('end', () => {
+                                    try {
+                                        const result = JSON.parse(data);
+                                        resolve(result.success === true);
+                                    } catch (e) { resolve(false); }
+                                });
+                            });
+                            httpReq.on('error', () => resolve(false));
+                            httpReq.on('timeout', () => { httpReq.destroy(); resolve(false); });
+                            httpReq.write(postBody);
+                            httpReq.end();
+                        });
+                    } catch (e) {
+                        console.error('[BillPayment] Payment call failed:', e.message);
+                        paymentSuccess = false;
+                    }
+                }
+
+                if (!paymentSuccess) {
+                    // Biller thất bại sau khi đã thu tiền → đánh dấu refund_pending
+                    await TransactionTrail.update({ transRefId }, { status: 'refund_pending' });
+                    console.warn(`[BillPayment] Biller từ chối/timeout. Trail=${transRefId} → refund_pending`);
+                    return res.error(RespCode.BILLER_PAYMENT_FAILED);
+                }
+
+                console.log(`[BillPayment] Payment OK: transRefId=${transRefId}`);
+                return res.ok({
+                    transactionCode: transRecord.code,
+                    billCode: billCode,
+                    amount: transRecord.amount,
+                    fee: transRecord.fee,
+                    totalAmount: transRecord.totalAmount
+                }, RespCode.BILL_PAYMENT_SUCCESS.message);
+            }
+
             return res.ok({
                 transactionCode: transRecord.code,
                 amount: transRecord.amount,
@@ -484,11 +650,11 @@ module.exports = {
             const pocketId = req.user.id;
             const phone = req.user.phone;
 
-            const page = parseInt(req.query.page || req.body.page) || 1;
-            const limit = parseInt(req.query.limit || req.body.limit) || 10;
+            const page = parseInt((req.query && req.query.page) || (req.body && req.body.page)) || 1;
+            const limit = parseInt((req.query && req.query.limit) || (req.body && req.body.limit)) || 10;
             const skip = (page - 1) * limit;
 
-            const transactions = await Transaction.find({
+            let query = {
                 or: [
                     { sender: pocketId },
                     { sender: phone },
@@ -496,19 +662,90 @@ module.exports = {
                     { receiver: phone }
                 ],
                 status: 'done'
-            })
+            };
+
+            // Lọc theo service (VD: P2P_TRANSFER, BILL_PAYMENT)
+            if (req.query.service) {
+                query.service = req.query.service;
+            }
+
+            // Lọc theo thời gian
+            if (req.query.fromDate || req.query.toDate) {
+                query.createdAt = {};
+                if (req.query.fromDate) query.createdAt['>='] = new Date(req.query.fromDate);
+                if (req.query.toDate) query.createdAt['<='] = new Date(req.query.toDate);
+            }
+
+            const transactions = await Transaction.find(query)
                 .sort('createdAt DESC')
                 .skip(skip)
                 .limit(limit);
 
+            const total = await Transaction.count(query);
+
+            // Bổ sung cờ đánh dấu đây là giao dịch TIỀN VÀO hay TIỀN RA
+            const formattedRecords = transactions.map(t => {
+                let type = 'OUT';
+                if (t.receiver === pocketId || t.receiver === phone) {
+                    type = 'IN';
+                }
+                return {
+                    ...t,
+                    type: type // 'IN' (nhận tiền) hoặc 'OUT' (chuyển tiền/thanh toán)
+                };
+            });
+
             return res.ok({
                 page: page,
                 limit: limit,
-                records: transactions
+                total: total,
+                records: formattedRecords
             }, RespCode.GET_HISTORY_SUCCESS.message);
 
         } catch (error) {
             console.error('Get My History Error:', error);
+            return res.error(RespCode.SYSTEM_ERROR);
+        }
+    },
+
+    // Xem chi tiết 1 giao dịch của chính mình
+    myTransactionDetail: async function (req, res) {
+        try {
+            const pocketId = req.user.id;
+            const phone = req.user.phone;
+            const transId = req.params.id;
+
+            if (!transId) {
+                return res.error(RespCode.INVALID_PARAMS);
+            }
+
+            const transaction = await Transaction.findOne({ id: transId });
+            
+            if (!transaction) {
+                return res.error(RespCode.TRANSACTION_NOT_FOUND);
+            }
+
+            // Bảo mật: Đảm bảo giao dịch này thuộc về người dùng đang đăng nhập
+            if (transaction.sender !== pocketId && transaction.sender !== phone &&
+                transaction.receiver !== pocketId && transaction.receiver !== phone) {
+                return res.error(RespCode.TRANSACTION_NOT_FOUND); // Trả về NOT_FOUND để che giấu
+            }
+
+            let type = (transaction.receiver === pocketId || transaction.receiver === phone) ? 'IN' : 'OUT';
+
+            // Có thể lấy thêm Trail để xem chi tiết
+            const trail = await TransactionTrail.findOne({ transRefId: transaction.transRefId });
+
+            return res.ok({
+                transaction: {
+                    ...transaction,
+                    type: type
+                },
+                details: trail ? trail.inputMessage : null
+            }, "Lấy chi tiết giao dịch thành công");
+
+        } catch (error) {
+            console.error('Get Transaction Detail Error:', error);
             return res.error(RespCode.SYSTEM_ERROR);
         }
     }

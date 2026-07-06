@@ -15,8 +15,9 @@ module.exports = {
                 return res.error(RespCode.ACCOUNT_LOCKED);
             }
 
-            const currentHash = crypto.createHash('md5').update(pocket.id + pocket.balance + 'secret').digest('hex');
-            console.log(`[Checksum Verify] Expected: ${currentHash}, Actual: ${pocket.checksum}`);
+            if (!ChecksumService.verify(pocket)) {
+                return res.error(RespCode.DATA_INTEGRITY_ERROR);
+            }
 
             return res.ok({
                 balance: pocket.balance,

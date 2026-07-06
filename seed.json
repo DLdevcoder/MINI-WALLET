@@ -119,15 +119,21 @@
         },
         {
           "order": 2,
+          "name": "BILLERCODE",
+          "rule": "mapping",
+          "source": "body.billerCode"
+        },
+        {
+          "order": 3,
           "name": "SENDERID",
           "rule": "mapping",
           "source": "ctx.senderId"
         },
         {
-          "order": 3,
+          "order": 4,
           "name": "RECEIVERID",
-          "rule": "fixed",
-          "source": "BILLER_EVN"
+          "rule": "query",
+          "source": "queryBillerPocket"
         }
       ],
       "transField": [

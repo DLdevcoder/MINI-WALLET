@@ -98,8 +98,43 @@ module.exports.bootstrap = async function (cb) {
 
           console.log(`Đã tạo service: ${srv.code}`);
         } else {
-          console.log(`Service đã tồn tại, bỏ qua: ${srv.code}`);
+          // Cập nhật fieldBuilder nếu đã thay đổi trong seed.json
+          await Service.update({ code: srv.code }, {
+            fieldBuilder: srv.fieldBuilder,
+            action: srv.action
+          });
+          console.log(`Đã cập nhật fieldBuilder của service: ${srv.code}`);
         }
+      }
+    }
+
+    // 4. Seed Biller (EVN)
+    const existingBiller = await Biller.findOne({ billerCode: 'EVN' });
+    if (!existingBiller) {
+      // Tìm pocket BILLER_EVN đã tạo ở bước 2
+      const billerPocket = await Pocket.findOne({ user: 'BILLER_EVN' });
+      await Biller.create({
+        billerCode: 'EVN',
+        name: 'Điện lực EVN (Giả lập)',
+        inquiryUrl: 'http://localhost:1337/mock/evn/inquiry',
+        paymentUrl: 'http://localhost:1337/mock/evn/payment',
+        pocket: billerPocket ? billerPocket.id : null,
+        status: 'active'
+      });
+      console.log('Đã tạo Biller: EVN');
+    }
+
+    // 5. Seed MockBill (hoá đơn mẫu để test)
+    const mockBills = [
+      { billCode: 'EVN001', billerCode: 'EVN', customerName: 'Nguyễn Văn A', amount: 150000 },
+      { billCode: 'EVN002', billerCode: 'EVN', customerName: 'Trần Thị B',   amount: 220000 },
+      { billCode: 'EVN003', billerCode: 'EVN', customerName: 'Lê Văn C',     amount: 85000  }
+    ];
+    for (const bill of mockBills) {
+      const existing = await MockBill.findOne({ billCode: bill.billCode });
+      if (!existing) {
+        await MockBill.create(bill);
+        console.log(`Đã tạo hoá đơn mẫu: ${bill.billCode} (${bill.amount}đ)`);
       }
     }
 
@@ -109,4 +144,4 @@ module.exports.bootstrap = async function (cb) {
     console.error(err);
     return cb(err);
   }
-};
+};
