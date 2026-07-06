@@ -650,8 +650,8 @@ module.exports = {
             const pocketId = req.user.id;
             const phone = req.user.phone;
 
-            const page = parseInt((req.query && req.query.page) || (req.body && req.body.page)) || 1;
-            const limit = parseInt((req.query && req.query.limit) || (req.body && req.body.limit)) || 10;
+            const page = parseInt(req.body.page) || 1;
+            const limit = parseInt(req.body.limit) || 10;
             const skip = (page - 1) * limit;
 
             let query = {
@@ -665,15 +665,15 @@ module.exports = {
             };
 
             // Lọc theo service (VD: P2P_TRANSFER, BILL_PAYMENT)
-            if (req.query.service) {
-                query.service = req.query.service;
+            if (req.body.service) {
+                query.service = req.body.service;
             }
 
             // Lọc theo thời gian
-            if (req.query.fromDate || req.query.toDate) {
+            if (req.body.fromDate || req.body.toDate) {
                 query.createdAt = {};
-                if (req.query.fromDate) query.createdAt['>='] = new Date(req.query.fromDate);
-                if (req.query.toDate) query.createdAt['<='] = new Date(req.query.toDate);
+                if (req.body.fromDate) query.createdAt['>='] = new Date(req.body.fromDate);
+                if (req.body.toDate) query.createdAt['<='] = new Date(req.body.toDate);
             }
 
             const transactions = await Transaction.find(query)
@@ -713,7 +713,7 @@ module.exports = {
         try {
             const pocketId = req.user.id;
             const phone = req.user.phone;
-            const transId = req.params.id;
+            const transId = req.body.id;
 
             if (!transId) {
                 return res.error(RespCode.INVALID_PARAMS);

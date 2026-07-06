@@ -15,24 +15,23 @@ module.exports = {
      */
     inquiry: async function (req, res) {
         try {
-            const billCode = req.query.billCode || req.body.billCode;
+            const billCode = req.body.billCode;
 
             if (!billCode) {
-                return res.json({ success: false, error: 'MISSING_BILL_CODE' });
+                return res.error(RespCode.INVALID_PARAMS, 'MISSING_BILL_CODE');
             }
 
             const bill = await MockBill.findOne({ billCode: String(billCode) });
 
             if (!bill) {
-                return res.json({ success: false, error: 'BILL_NOT_FOUND' });
+                return res.error(RespCode.BILL_NOT_FOUND);
             }
 
             if (bill.isPaid) {
-                return res.json({ success: false, error: 'BILL_ALREADY_PAID' });
+                return res.error(RespCode.BILL_ALREADY_PAID);
             }
 
-            return res.json({
-                success: true,
+            return res.ok({
                 billCode: bill.billCode,
                 billerCode: bill.billerCode,
                 customerName: bill.customerName,
@@ -41,7 +40,7 @@ module.exports = {
 
         } catch (error) {
             console.error('[MockBiller] Inquiry Error:', error);
-            return res.json({ success: false, error: 'BILLER_INTERNAL_ERROR' });
+            return res.error(RespCode.SYSTEM_ERROR, 'BILLER_INTERNAL_ERROR');
         }
     },
 
@@ -58,31 +57,30 @@ module.exports = {
             const { transRefId, billCode, amount } = req.body;
 
             if (!transRefId || !billCode || !amount) {
-                return res.json({ success: false, error: 'MISSING_PARAMS' });
+                return res.error(RespCode.INVALID_PARAMS, 'MISSING_PARAMS');
             }
 
             const bill = await MockBill.findOne({ billCode: String(billCode) });
 
             if (!bill) {
-                return res.json({ success: false, error: 'BILL_NOT_FOUND' });
+                return res.error(RespCode.BILL_NOT_FOUND);
             }
 
             // Idempotency: cùng transRefId → trả lại kết quả cũ
             if (bill.isPaid && bill.billerRefId === transRefId) {
-                return res.json({
-                    success: true,
+                return res.ok({
                     billerRefId: bill.billerRefId,
                     note: 'ALREADY_PROCESSED'
                 });
             }
 
             if (bill.isPaid) {
-                return res.json({ success: false, error: 'BILL_ALREADY_PAID' });
+                return res.error(RespCode.BILL_ALREADY_PAID);
             }
 
             // Kiểm tra số tiền khớp (biller có thể từ chối nếu amount sai)
             if (parseFloat(amount) !== bill.amount) {
-                return res.json({ success: false, error: 'AMOUNT_MISMATCH' });
+                return res.error(RespCode.INVALID_AMOUNT, 'AMOUNT_MISMATCH');
             }
 
             // Đánh dấu đã thanh toán + lưu billerRefId = transRefId (để idempotency)
@@ -93,14 +91,13 @@ module.exports = {
 
             console.log(`[MockBiller] Thanh toán thành công: billCode=${billCode}, transRefId=${transRefId}`);
 
-            return res.json({
-                success: true,
+            return res.ok({
                 billerRefId: transRefId
             });
 
         } catch (error) {
             console.error('[MockBiller] Payment Error:', error);
-            return res.json({ success: false, error: 'BILLER_INTERNAL_ERROR' });
+            return res.error(RespCode.SYSTEM_ERROR, 'BILLER_INTERNAL_ERROR');
         }
     }
 };

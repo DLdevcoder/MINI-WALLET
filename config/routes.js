@@ -11,20 +11,19 @@ module.exports.routes = {
   'POST /auth/admin/login': 'AuthController.loginAdmin',
 
   // Customer
-  'GET /pockets/me': 'PocketController.myPocket',
-  'POST /pockets/me': 'PocketController.myPocket', // Giữ lại POST để tương thích cũ
-  'GET /transactions/me': 'TransactionController.myHistory',
-  'GET /transactions/me/:id': 'TransactionController.myTransactionDetail',
+  'POST /pockets/me': 'PocketController.myPocket',
+  'POST /transactions/me': 'TransactionController.myHistory',
+  'POST /transactions/me/detail': 'TransactionController.myTransactionDetail',
 
   // Admin
   'POST /admin/cash-in': 'AdminController.cashIn',
-  'GET /admin/transactions': 'AdminController.listTransactions',
-  'GET /admin/trails': 'AdminController.listTrails',
-  'GET /admin/customers': 'AdminController.listCustomers',
-  'GET /admin/pocket-entries': 'AdminController.listPocketEntries',
+  'POST /admin/transactions': 'AdminController.listTransactions',
+  'POST /admin/trails': 'AdminController.listTrails',
+  'POST /admin/customers': 'AdminController.listCustomers',
+  'POST /admin/pocket-entries': 'AdminController.listPocketEntries',
   'POST /admin/pocket/unlock': 'AdminController.forceUnlockPocket',
 
   // Mock Biller (giả lập hệ thống đối tác bên ngoài)
-  'GET /mock/evn/inquiry': 'MockBillerController.inquiry',
+  'POST /mock/evn/inquiry': 'MockBillerController.inquiry',
   'POST /mock/evn/payment': 'MockBillerController.payment',
 };
