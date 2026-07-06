@@ -99,11 +99,34 @@ module.exports = {
             const customer = await Customer.findOne({ phone: req.user.phone });
             if (!customer) return res.error(RespCode.USER_NOT_FOUND);
 
+            if (customer.status !== 'active') {
+                return res.error(RespCode.ACCOUNT_LOCKED);
+            }
+
             merchantPocketId = customer.pocket;
 
             if (!pin) return res.error(RespCode.MISSING_PIN);
-            if (!bcrypt.compareSync(pin.toString(), customer.pinHash)) {
+            
+            const isMatch = bcrypt.compareSync(pin.toString(), customer.pinHash);
+            if (!isMatch) {
+                let attempts = (customer.failedPinAttempts || 0) + 1;
+                let newStatus = customer.status;
+
+                if (attempts >= 5) {
+                    newStatus = 'locked';
+                }
+                
+                await Customer.update({ id: customer.id }, { failedPinAttempts: attempts, status: newStatus });
+                
+                if (newStatus === 'locked') {
+                    return res.error(RespCode.ACCOUNT_LOCKED);
+                }
                 return res.error(RespCode.INVALID_OTP);
+            }
+
+            // Xác thực PIN thành công -> Reset số lần sai PIN
+            if (customer.failedPinAttempts > 0) {
+                await Customer.update({ id: customer.id }, { failedPinAttempts: 0 });
             }
 
             // 2. Validate dữ liệu & Tra cứu ví nhận

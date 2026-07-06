@@ -78,7 +78,24 @@ module.exports = {
 
             const isMatch = bcrypt.compareSync(pin.toString(), customer.pinHash);
             if (!isMatch) {
+                let attempts = (customer.failedPinAttempts || 0) + 1;
+                let newStatus = customer.status;
+
+                if (attempts >= 5) {
+                    newStatus = 'locked';
+                }
+                
+                await Customer.update({ id: customer.id }, { failedPinAttempts: attempts, status: newStatus });
+                
+                if (newStatus === 'locked') {
+                    return res.error(RespCode.ACCOUNT_LOCKED);
+                }
                 return res.error(RespCode.WRONG_PIN);
+            }
+
+            // Đăng nhập thành công -> Reset số lần sai PIN
+            if (customer.failedPinAttempts > 0) {
+                await Customer.update({ id: customer.id }, { failedPinAttempts: 0 });
             }
 
             const tokenPayload = { id: customer.pocket, phone: customer.phone };

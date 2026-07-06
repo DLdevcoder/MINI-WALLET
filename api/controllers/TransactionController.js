@@ -428,10 +428,31 @@ module.exports = {
                 if (!customer) {
                     return res.error(RespCode.USER_NOT_FOUND);
                 }
+                
+                if (customer.status !== 'active') {
+                    return res.error(RespCode.ACCOUNT_LOCKED);
+                }
 
                 const isPinValid = bcrypt.compareSync(pin.toString(), customer.pinHash);
                 if (!isPinValid) {
+                    let attempts = (customer.failedPinAttempts || 0) + 1;
+                    let newStatus = customer.status;
+
+                    if (attempts >= 5) {
+                        newStatus = 'locked';
+                    }
+                    
+                    await Customer.update({ id: customer.id }, { failedPinAttempts: attempts, status: newStatus });
+                    
+                    if (newStatus === 'locked') {
+                        return res.error(RespCode.ACCOUNT_LOCKED);
+                    }
                     return res.error(RespCode.INVALID_OTP);
+                }
+
+                // Xác thực PIN thành công -> Reset số lần sai PIN
+                if (customer.failedPinAttempts > 0) {
+                    await Customer.update({ id: customer.id }, { failedPinAttempts: 0 });
                 }
             }
 
