@@ -236,12 +236,12 @@ module.exports = {
 
     listTransactions: async function (req, res) {
         try {
-            const page = parseInt(req.query.page) || 1;
-            const limit = parseInt(req.query.limit) || 10;
+            const page = parseInt(req.body.page) || 1;
+            const limit = parseInt(req.body.limit) || 10;
             const skip = (page - 1) * limit;
             
-            const query = {};
-            if (req.query.status) query.status = req.query.status;
+            let query = {};
+            if (req.body.status) query.status = req.body.status;
 
             const transactions = await Transaction.find(query).sort('createdAt DESC').skip(skip).limit(limit);
             const total = await Transaction.count(query);
@@ -258,13 +258,13 @@ module.exports = {
 
     listTrails: async function (req, res) {
         try {
-            const page = parseInt(req.query.page) || 1;
-            const limit = parseInt(req.query.limit) || 10;
+            const page = parseInt(req.body.page) || 1;
+            const limit = parseInt(req.body.limit) || 10;
             const skip = (page - 1) * limit;
 
-            const query = {};
-            if (req.query.status) query.status = req.query.status;
-            if (req.query.transRefId) query.transRefId = req.query.transRefId;
+            let query = {};
+            if (req.body.status) query.status = req.body.status;
+            if (req.body.transRefId) query.transRefId = req.body.transRefId;
 
             const trails = await TransactionTrail.find(query).sort('createdAt DESC').skip(skip).limit(limit);
             const total = await TransactionTrail.count(query);
@@ -281,12 +281,12 @@ module.exports = {
 
     listCustomers: async function (req, res) {
         try {
-            const page = parseInt(req.query.page) || 1;
-            const limit = parseInt(req.query.limit) || 10;
+            const page = parseInt(req.body.page) || 1;
+            const limit = parseInt(req.body.limit) || 10;
             const skip = (page - 1) * limit;
 
-            const query = {};
-            if (req.query.phone) query.phone = { contains: req.query.phone };
+            let query = {};
+            if (req.body.phone) query.phone = { contains: req.body.phone };
 
             const customers = await Customer.find(query).sort('createdAt DESC').skip(skip).limit(limit);
             const total = await Customer.count(query);
@@ -337,14 +337,14 @@ module.exports = {
     // Có thể lọc theo transRefId: ?transRefId=TXN1234
     listPocketEntries: async function (req, res) {
         try {
-            const page  = parseInt(req.query.page)  || 1;
-            const limit = parseInt(req.query.limit) || 20;
+            const page  = parseInt(req.body.page)  || 1;
+            const limit = parseInt(req.body.limit) || 20;
             const skip  = (page - 1) * limit;
 
-            const query = {};
-            if (req.query.transRefId) query.transRefId = req.query.transRefId;
-            if (req.query.debit)      query.debit      = req.query.debit;
-            if (req.query.credit)     query.credit     = req.query.credit;
+            let query = {};
+            if (req.body.transRefId) query.transRefId = req.body.transRefId;
+            if (req.body.debit)      query.debit      = req.body.debit;
+            if (req.body.credit)     query.credit     = req.body.credit;
 
             const entries = await PocketEntry.find(query)
                 .sort('createdAt DESC')
