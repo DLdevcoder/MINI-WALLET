@@ -9,6 +9,6 @@ module.exports = {
         actionParams: { type: 'json' },
         fee: { type: 'json' },
         auth: { type: 'json' },
-        status: { type: 'string', enum: ['active', 'inactive'], defaultsTo: 'active' }
+        status: { type: 'string', enum: ['active', 'inactive'], defaultsTo: 'inactive' }
     }
 };

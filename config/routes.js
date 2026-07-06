@@ -15,6 +15,13 @@ module.exports.routes = {
   'POST /transactions/me': 'TransactionController.myHistory',
   'POST /transactions/me/detail': 'TransactionController.myTransactionDetail',
 
+  // ================= ADMIN & CONFIG ROUTES =================
+  'POST /admin/services/list': 'ServiceConfigController.listServices',
+  'POST /admin/services/create': 'ServiceConfigController.createService',
+  'POST /admin/services/toggle': 'ServiceConfigController.toggleServiceStatus',
+  'POST /admin/services/config/get': 'ServiceConfigController.getServiceConfig',
+  'POST /admin/services/config/save': 'ServiceConfigController.saveServiceConfig',
+
   // Admin
   'POST /admin/cash-in': 'AdminController.cashIn',
   'POST /admin/transactions': 'AdminController.listTransactions',

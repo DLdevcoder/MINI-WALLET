@@ -16,7 +16,7 @@ export default function Login() {
     setErrorMsg('');
 
     try {
-      const response = await fetch('http://localhost:1337/auth/admin/login', {
+      const response = await fetch('/auth/admin/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
