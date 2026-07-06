@@ -26,9 +26,9 @@ export default function Login() {
 
       const data = await response.json();
 
-      if (response.ok && data.token) {
-        localStorage.setItem('adminToken', data.token);
-        localStorage.setItem('adminUser', JSON.stringify(data.officer));
+      if (data.err === 200) {
+        localStorage.setItem('adminToken', data.data?.token);
+        localStorage.setItem('adminUser', JSON.stringify(data.data?.officer || {}));
         navigate('/dashboard');
       } else {
         setErrorMsg(data.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại.');
