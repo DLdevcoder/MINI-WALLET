@@ -29,6 +29,11 @@ module.exports.routes = {
   'POST /admin/customers': 'AdminController.listCustomers',
   'POST /admin/pocket-entries': 'AdminController.listPocketEntries',
   'POST /admin/pocket/unlock': 'AdminController.forceUnlockPocket',
+  
+  // Admin Pockets Management
+  'POST /admin/pockets/list': 'PocketController.adminList',
+  'POST /admin/pockets/create': 'PocketController.adminCreate',
+  'POST /admin/pockets/topup': 'PocketController.adminTopup',
 
   // Mock Biller (giả lập hệ thống đối tác bên ngoài)
   'POST /mock/evn/inquiry': 'MockBillerController.inquiry',

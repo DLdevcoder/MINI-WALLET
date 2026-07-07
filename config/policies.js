@@ -16,7 +16,10 @@ module.exports.policies = {
   },
 
   PocketController: {
-    '*': 'isAuthorized'
+    '*': 'isAuthorized',
+    'adminList': 'isOfficer',
+    'adminCreate': 'isOfficer',
+    'adminTopup': 'isOfficer'
   },
 
   AdminController: {

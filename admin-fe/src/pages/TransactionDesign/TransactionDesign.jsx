@@ -8,6 +8,15 @@ import {
 import { useNavigate, useParams } from 'react-router-dom';
 import './TransactionDesign.css';
 
+const PREDEFINED_FIELDS = [
+  { value: 'AMOUNT', label: 'Số tiền giao dịch (AMOUNT)' },
+  { value: 'RECEIVERPHONE', label: 'Số ĐT người nhận (RECEIVERPHONE)' },
+  { value: 'BILLCODE', label: 'Mã hoá đơn (BILLCODE)' },
+  { value: 'BILLERCODE', label: 'Mã đối tác (BILLERCODE)' },
+  { value: 'DESCRIPTION', label: 'Nội dung/Mô tả (DESCRIPTION)' },
+  { value: '_OTHER_', label: 'Khác (Tự định nghĩa)' }
+];
+
 export default function TransactionDesign() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -167,18 +176,40 @@ export default function TransactionDesign() {
                       <GripVertical size={18} className="drag-handle" />
                       <div className="item-content">
                         <div className="input-group-grid">
-                          <div>
+                          <div style={{ flex: '1.5' }}>
                             <label>Biến lưu trữ (Field Code)</label>
-                            <input 
-                              type="text" 
-                              className="form-input" 
-                              value={field.fieldName || ''} 
-                              onChange={(e) => {
-                                const newFields = [...transFields];
-                                newFields[idx].fieldName = e.target.value;
-                                setTransFields(newFields);
-                              }}
-                            />
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                              <select 
+                                className="form-input" 
+                                value={PREDEFINED_FIELDS.find(f => f.value === field.fieldName) ? field.fieldName : (field.fieldName === '' ? '' : '_OTHER_')} 
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  const newFields = [...transFields];
+                                  if (val === '_OTHER_') {
+                                    newFields[idx].fieldName = 'CUSTOM_VAR';
+                                  } else {
+                                    newFields[idx].fieldName = val;
+                                  }
+                                  setTransFields(newFields);
+                                }}
+                              >
+                                <option value="">-- Chọn --</option>
+                                {PREDEFINED_FIELDS.map(pf => <option key={pf.value} value={pf.value}>{pf.label}</option>)}
+                              </select>
+                              {(!PREDEFINED_FIELDS.find(f => f.value === field.fieldName) && field.fieldName !== '') && (
+                                <input 
+                                  type="text" 
+                                  className="form-input" 
+                                  value={field.fieldName || ''} 
+                                  placeholder="Nhập tên biến"
+                                  onChange={(e) => {
+                                    const newFields = [...transFields];
+                                    newFields[idx].fieldName = e.target.value.toUpperCase();
+                                    setTransFields(newFields);
+                                  }}
+                                />
+                              )}
+                            </div>
                           </div>
                           <div>
                             <label>Kiểu dữ liệu</label>

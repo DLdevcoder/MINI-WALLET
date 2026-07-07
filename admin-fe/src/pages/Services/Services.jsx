@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Power, Settings, MoreVertical, ShieldCheck, Activity, X } from 'lucide-react';
+import { Plus, Power, Settings, ShieldCheck, Activity, X } from 'lucide-react';
 import './Services.css';
 
 export default function Services() {
@@ -168,9 +168,6 @@ export default function Services() {
                       onClick={() => window.location.href = `/dashboard/services/${service.id}/design`}
                     >
                       <Settings size={18} />
-                    </button>
-                    <button className="icon-btn-sm" title="Tuỳ chọn khác">
-                      <MoreVertical size={18} />
                     </button>
                   </div>
                 </td>

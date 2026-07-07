@@ -15,9 +15,9 @@ module.exports = {
             return true;
         }
 
-        const expectedHash = this.compute(pocket.balance, pocket.id);
+        const expectedHash = this.compute(pocket.balance, pocket.user);
         if (pocket.checksum !== expectedHash) {
-            console.error(`[Checksum Verify Failed] Pocket ID: ${pocket.id}, Expected: ${expectedHash}, Actual: ${pocket.checksum}`);
+            console.error(`[Checksum Verify Failed] Pocket User: ${pocket.user}, Expected: ${expectedHash}, Actual: ${pocket.checksum}`);
             return false;
         }
         

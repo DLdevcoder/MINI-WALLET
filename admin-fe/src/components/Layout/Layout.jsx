@@ -10,7 +10,8 @@ import {
   X,
   Bell,
   Search,
-  ChevronDown
+  ChevronDown,
+  Wallet
 } from 'lucide-react';
 import './Layout.css';
 
@@ -28,6 +29,7 @@ export default function Layout() {
   const navItems = [
     { path: '/dashboard', label: 'Tổng quan', icon: LayoutDashboard },
     { path: '/dashboard/services', label: 'Quản lý Services', icon: Settings2 },
+    { path: '/dashboard/pockets', label: 'Quản lý Ví', icon: Wallet },
     { path: '/dashboard/customers', label: 'Khách hàng', icon: Users },
     { path: '/dashboard/transactions', label: 'Giao dịch', icon: CreditCard }
   ];
@@ -94,7 +96,7 @@ export default function Layout() {
             </div>
             <button className="icon-btn">
               <Bell size={20} />
-              <span className="badge">3</span>
+              <span className="notification-badge">3</span>
             </button>
             <div className="user-profile">
               <div className="avatar">A</div>

@@ -34,7 +34,7 @@ function updateBalanceNative(pocketId, amountChange) {
                     if (!doc) return reject(new Error('Pocket not found'));
 
                     const newBalance = doc.balance;
-                    const newChecksum = ChecksumService.compute(newBalance, doc._id.toString());
+                    const newChecksum = ChecksumService.compute(newBalance, doc.user);
 
                     collection.updateOne(
                         query,

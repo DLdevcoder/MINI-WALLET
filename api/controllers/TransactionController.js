@@ -33,7 +33,7 @@ function updatePocketBalance(pocketId, amountChange) {
                     }
 
                     const newBalance = doc.balance;
-                    const newChecksum = ChecksumService.compute(newBalance, pocketId);
+                    const newChecksum = ChecksumService.compute(newBalance, doc.user);
 
                     collection.updateOne(
                         { _id: objectId },

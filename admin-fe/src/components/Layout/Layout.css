@@ -214,7 +214,7 @@
   background-color: rgba(255, 255, 255, 0.05);
 }
 
-.badge {
+.notification-badge {
   position: absolute;
   top: 6px;
   right: 6px;
