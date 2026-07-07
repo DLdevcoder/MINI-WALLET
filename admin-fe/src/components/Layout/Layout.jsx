@@ -11,7 +11,8 @@ import {
   Bell,
   Search,
   ChevronDown,
-  Wallet
+  Wallet,
+  Activity
 } from 'lucide-react';
 import './Layout.css';
 
@@ -31,7 +32,8 @@ export default function Layout() {
     { path: '/dashboard/services', label: 'Quản lý Services', icon: Settings2 },
     { path: '/dashboard/pockets', label: 'Quản lý Ví', icon: Wallet },
     { path: '/dashboard/customers', label: 'Khách hàng', icon: Users },
-    { path: '/dashboard/transactions', label: 'Giao dịch', icon: CreditCard }
+    { path: '/dashboard/trails', label: 'Tra cứu GD (Trails)', icon: Activity },
+    { path: '/dashboard/transactions', label: 'Biên lai (History)', icon: CreditCard }
   ];
 
   const currentPathName = navItems.find(item => location.pathname.startsWith(item.path))?.label || 'Bảng điều khiển';

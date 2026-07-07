@@ -4,6 +4,7 @@ import Services from './pages/Services/Services';
 import TransactionDesign from './pages/TransactionDesign/TransactionDesign';
 import Pockets from './pages/Pockets/Pockets';
 import Customers from './pages/Customers/Customers';
+import Trails from './pages/Trails/Trails';
 import Layout from './components/Layout/Layout';
 import './App.css';
 
@@ -37,6 +38,7 @@ function App() {
           <Route path="services/:id/design" element={<TransactionDesign />} />
           <Route path="pockets" element={<Pockets />} />
           <Route path="customers" element={<Customers />} />
+          <Route path="trails" element={<Trails />} />
           <Route path="transactions" element={<div style={{ color: 'white' }}>Transaction Management Page (Sắp ra mắt)</div>} />
         </Route>
       </Routes>
