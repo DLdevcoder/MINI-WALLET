@@ -30,19 +30,19 @@ export default function Pockets() {
       },
       body: JSON.stringify({ clientType: filterType })
     })
-    .then(res => res.json())
-    .then(data => {
-      if (data.err === 200) {
-        setPockets(data.data.data || []);
-      } else {
-        console.error(data.message);
-      }
-      setLoading(false);
-    })
-    .catch(err => {
-      console.error(err);
-      setLoading(false);
-    });
+      .then(res => res.json())
+      .then(data => {
+        if (data.err === 200) {
+          setPockets(data.data.data || []);
+        } else {
+          console.error(data.message);
+        }
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error(err);
+        setLoading(false);
+      });
   };
 
   const handleCreatePocket = (e) => {
@@ -55,17 +55,17 @@ export default function Pockets() {
       },
       body: JSON.stringify(createForm)
     })
-    .then(res => res.json())
-    .then(data => {
-      if (data.err === 200) {
-        alert('Tạo ví thành công');
-        setShowCreateModal(false);
-        setCreateForm({ pocketId: '', clientType: 'system', currency: 'VND' });
-        fetchPockets();
-      } else {
-        alert('Lỗi: ' + data.message);
-      }
-    });
+      .then(res => res.json())
+      .then(data => {
+        if (data.err === 200) {
+          alert('Tạo ví thành công');
+          setShowCreateModal(false);
+          setCreateForm({ pocketId: '', clientType: 'system', currency: 'VND' });
+          fetchPockets();
+        } else {
+          alert('Lỗi: ' + data.message);
+        }
+      });
   };
 
   const handleTopup = (e) => {
@@ -78,17 +78,17 @@ export default function Pockets() {
       },
       body: JSON.stringify({ pocketId: selectedPocket.user, amount: Number(topupAmount) })
     })
-    .then(res => res.json())
-    .then(data => {
-      if (data.err === 200) {
-        alert('Nạp tiền thành công');
-        setShowTopupModal(false);
-        setTopupAmount('');
-        fetchPockets();
-      } else {
-        alert('Lỗi: ' + data.message);
-      }
-    });
+      .then(res => res.json())
+      .then(data => {
+        if (data.err === 200) {
+          alert('Nạp tiền thành công');
+          setShowTopupModal(false);
+          setTopupAmount('');
+          fetchPockets();
+        } else {
+          alert('Lỗi: ' + data.message);
+        }
+      });
   };
 
   const formatMoney = (amount) => {
@@ -99,8 +99,8 @@ export default function Pockets() {
     <div className="pockets-page fade-in">
       <div className="page-header">
         <div className="header-left">
-          <h2 className="page-title">Quản lý Ví (Pockets)</h2>
-          <p className="page-desc">Tạo và nạp số dư khởi tạo cho ví Hệ thống, Ngân hàng.</p>
+          <h2 className="page-title">Quản lý ví</h2>
+          <p className="page-desc">Quản lý các ví của hệ thống</p>
         </div>
         <div className="header-right">
           <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
@@ -111,7 +111,7 @@ export default function Pockets() {
       </div>
 
       <div className="filter-bar glass-card">
-        <select 
+        <select
           className="filter-select"
           value={filterType}
           onChange={(e) => setFilterType(e.target.value)}
@@ -122,9 +122,9 @@ export default function Pockets() {
           <option value="biller">Ví Đối Tác (Biller)</option>
           <option value="customer">Ví Khách Hàng (Customer)</option>
         </select>
-        
+
         <div style={{ flex: 1 }}></div>
-        
+
         <div className="search-bar" style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)' }}>
           <Search size={18} className="search-icon" />
           <input type="text" placeholder="Tìm theo ID ví..." className="search-input" />
@@ -175,7 +175,7 @@ export default function Pockets() {
                   </td>
                   <td>
                     {['bank', 'system'].includes(pocket.client) && (
-                      <button 
+                      <button
                         className="btn-topup"
                         onClick={() => {
                           setSelectedPocket(pocket);
@@ -201,21 +201,21 @@ export default function Pockets() {
             <form onSubmit={handleCreatePocket}>
               <div className="form-group">
                 <label>Mã ví (ID viết liền, in hoa)</label>
-                <input 
-                  type="text" 
-                  className="form-control" 
+                <input
+                  type="text"
+                  className="form-control"
                   placeholder="VD: BANK_POCKET_02"
                   value={createForm.pocketId}
-                  onChange={(e) => setCreateForm({...createForm, pocketId: e.target.value.toUpperCase()})}
+                  onChange={(e) => setCreateForm({ ...createForm, pocketId: e.target.value.toUpperCase() })}
                   required
                 />
               </div>
               <div className="form-group">
                 <label>Phân loại ví</label>
-                <select 
+                <select
                   className="form-control"
                   value={createForm.clientType}
-                  onChange={(e) => setCreateForm({...createForm, clientType: e.target.value})}
+                  onChange={(e) => setCreateForm({ ...createForm, clientType: e.target.value })}
                 >
                   <option value="system">Ví Hệ Thống (System)</option>
                   <option value="bank">Ví Ngân Hàng (Bank)</option>
@@ -224,7 +224,7 @@ export default function Pockets() {
                   * Lưu ý: Ví Customer và Biller sẽ tự động sinh khi tạo tài khoản, không tạo thủ công ở đây.
                 </p>
               </div>
-              
+
               <div className="modal-actions">
                 <button type="button" className="btn-cancel" onClick={() => setShowCreateModal(false)}>Hủy bỏ</button>
                 <button type="submit" className="btn btn-primary">Tạo mới</button>
@@ -240,15 +240,15 @@ export default function Pockets() {
           <div className="modal-card fade-in">
             <h3 className="modal-title">Nạp Tiền Nhanh</h3>
             <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
-              Đang nạp tiền trực tiếp vào ví <b>{selectedPocket.user}</b> ({selectedPocket.client}). 
+              Đang nạp tiền trực tiếp vào ví <b>{selectedPocket.user}</b> ({selectedPocket.client}).
               Thao tác này sẽ tự động cập nhật Checksum.
             </p>
             <form onSubmit={handleTopup}>
               <div className="form-group">
                 <label>Số tiền nạp thêm (VND)</label>
-                <input 
-                  type="number" 
-                  className="form-control" 
+                <input
+                  type="number"
+                  className="form-control"
                   placeholder="VD: 1000000"
                   value={topupAmount}
                   onChange={(e) => setTopupAmount(e.target.value)}
@@ -256,7 +256,7 @@ export default function Pockets() {
                   required
                 />
               </div>
-              
+
               <div className="modal-actions">
                 <button type="button" className="btn-cancel" onClick={() => {
                   setShowTopupModal(false);

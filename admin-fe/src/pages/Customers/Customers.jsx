@@ -84,7 +84,7 @@ export default function Customers() {
     <div className="customers-page fade-in">
       <div className="page-header">
         <div className="header-left">
-          <h1 className="page-title">Quản lý Khách hàng</h1>
+          <h1 className="page-title">Quản lý khách hàng</h1>
           <p className="page-subtitle">Danh sách người dùng và trạng thái tài khoản</p>
         </div>
       </div>
@@ -154,7 +154,7 @@ export default function Customers() {
                   </td>
                   <td>
                     {customer.status === 'locked' ? (
-                      <button 
+                      <button
                         className="btn-unlock"
                         onClick={() => toggleStatus(customer.id, customer.status)}
                         title="Mở khoá tài khoản"
@@ -162,7 +162,7 @@ export default function Customers() {
                         <Unlock size={16} /> Mở khoá
                       </button>
                     ) : (
-                      <button 
+                      <button
                         className="btn-lock"
                         onClick={() => toggleStatus(customer.id, 'active')}
                         title="Khoá tài khoản"
@@ -180,14 +180,14 @@ export default function Customers() {
         <div className="pagination">
           <span className="page-info">Hiển thị {customers.length} trên tổng số {total} khách hàng</span>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button 
-              className="page-btn" 
+            <button
+              className="page-btn"
               disabled={page === 1}
               onClick={() => setPage(page - 1)}
             >
               Trước
             </button>
-            <button 
+            <button
               className="page-btn"
               disabled={page === totalPages}
               onClick={() => setPage(page + 1)}

@@ -3,127 +3,7 @@ const crypto = require('crypto');
 const RespCode = require('../services/Respcode');
 const ChecksumService = require('../services/ChecksumService');
 
-// Dùng native MongoDB để $inc balance + cập nhật checksum cùng lúc
-function updatePocketBalance(pocketId, amountChange) {
-    return new Promise((resolve, reject) => {
-        Pocket.native(function (err, collection) {
-            if (err) return reject(err);
-
-            let objectId;
-            try {
-                const mongodb = require('mongodb');
-                const ObjectId = mongodb.ObjectID || mongodb.ObjectId;
-                objectId = new ObjectId(pocketId);
-            } catch (e) {
-                objectId = pocketId; // fallback nếu là string thuần
-            }
-
-            collection.findOneAndUpdate(
-                { _id: objectId },
-                { $inc: { balance: amountChange } },
-                // Bổ sung returnDocument: 'after' để hỗ trợ các phiên bản MongoDB driver mới
-                { returnOriginal: false, returnDocument: 'after' },
-                function (err, result) {
-                    if (err) return reject(err);
-
-                    // Tương thích chuẩn trả về của driver v3, v4 và v5
-                    const doc = result.value || result;
-                    if (!doc || doc.balance === undefined) {
-                        return reject(new Error('Pocket not found or missing balance: ' + pocketId));
-                    }
-
-                    const newBalance = doc.balance;
-                    const newChecksum = ChecksumService.compute(newBalance, doc.user);
-
-                    collection.updateOne(
-                        { _id: objectId },
-                        { $set: { checksum: newChecksum } },
-                        function (err2) {
-                            if (err2) return reject(err2);
-                            resolve({ newBalance, newChecksum });
-                        }
-                    );
-                }
-            );
-        });
-    });
-}
-
-/**
- * Giải quyết Pocket ID từ level + target
- */
-async function resolvePocketId(level, target, transBody) {
-    if (level === 'wallet') {
-        // Nếu target nằm trong transBody (như 'RECEIVERID'), lấy ID thật (như 'BILLER_EVN')
-        // Nếu không có, hiểu target chính là ID cứng (như 'SYSTEM_FEE')
-        const realTarget = transBody[target] !== undefined ? transBody[target] : target;
-
-        // Truy vấn ví hệ thống qua trường 'user'
-        const pocket = await Pocket.findOne({ user: realTarget });
-        return pocket ? pocket.id : null;
-    }
-
-    // level === 'productLevel': target LUÔN là một biến trong transBody (VD: 'SENDERID', 'RECEIVERID')
-    return transBody[target] || null;
-}
-
-/**
- * Khoá ví người gửi bằng Native DB để tránh ORM ghi đè
- */
-function lockPocket(pocketId) {
-    return new Promise((resolve, reject) => {
-        Pocket.native(function (err, collection) {
-            if (err) return reject(err);
-
-            let objectId;
-            try {
-                const mongodb = require('mongodb');
-                const ObjectId = mongodb.ObjectID || mongodb.ObjectId;
-                objectId = new ObjectId(pocketId);
-            } catch (e) {
-                objectId = pocketId;
-            }
-
-            collection.findOneAndUpdate(
-                { _id: objectId, status: 'active' },
-                { $set: { status: 'inProgress' } },
-                function (err, result) {
-                    if (err) return reject(err);
-                    const doc = result.value || result;
-                    resolve(!!doc);
-                }
-            );
-        });
-    });
-}
-
-/**
- * Mở khoá ví bằng Native DB
- */
-function unlockPocket(pocketId) {
-    return new Promise((resolve) => {
-        Pocket.native(function (err, collection) {
-            if (err) return resolve(); // Bỏ qua lỗi để tiếp tục luồng trả response
-
-            let objectId;
-            try {
-                const mongodb = require('mongodb');
-                const ObjectId = mongodb.ObjectID || mongodb.ObjectId;
-                objectId = new ObjectId(pocketId);
-            } catch (e) {
-                objectId = pocketId;
-            }
-
-            collection.updateOne(
-                { _id: objectId },
-                { $set: { status: 'active' } },
-                function () {
-                    resolve();
-                }
-            );
-        });
-    });
-}
+const PocketService = require('../services/PocketService');
 
 module.exports = {
 
@@ -468,7 +348,7 @@ module.exports = {
                 return res.error(RespCode.POCKET_NOT_FOUND);
             }
 
-            const locked = await lockPocket(senderPocketId);
+            const locked = await PocketService.lockPocket(senderPocketId);
             if (!locked) {
                 // Ví đang bị lock → giao dịch khác đang chạy
                 return res.error(RespCode.INVALID_TRANS_STATE);
@@ -478,14 +358,14 @@ module.exports = {
             // Re-validate số dư lần 2
             const senderPocket = await Pocket.findOne({ id: senderPocketId });
             if (!senderPocket) {
-                await unlockPocket(senderPocketId);
+                await PocketService.unlockPocket(senderPocketId);
                 await TransactionTrail.update({ transRefId }, { status: 'pending' });
                 return res.error(RespCode.POCKET_NOT_FOUND);
             }
 
             const requiredTotal = amount + fee;
             if ((senderPocket.balance || 0) < requiredTotal) {
-                await unlockPocket(senderPocketId);
+                await PocketService.unlockPocket(senderPocketId);
                 await TransactionTrail.update({ transRefId }, { status: 'pending' });
                 return res.error(RespCode.INSUFFICIENT_BALANCE);
             }
@@ -513,16 +393,16 @@ module.exports = {
                 const creditLvl = step.creditLevel || (step.credit && step.credit.level);
                 const creditTgt = step.creditTarget || (step.credit && step.credit.target);
 
-                const debitPocketId = await resolvePocketId(debitLvl, debitTgt, transBody);
-                const creditPocketId = await resolvePocketId(creditLvl, creditTgt, transBody);
+                const debitPocketId = await PocketService.resolvePocketId(debitLvl, debitTgt, transBody);
+                const creditPocketId = await PocketService.resolvePocketId(creditLvl, creditTgt, transBody);
 
                 // Trừ ví nguồn
                 if (debitPocketId) {
-                    await updatePocketBalance(debitPocketId, -Math.abs(stepAmount));
+                    await PocketService.updatePocketBalance(debitPocketId, -Math.abs(stepAmount));
                 }
                 // Cộng ví đích
                 if (creditPocketId) {
-                    await updatePocketBalance(creditPocketId, Math.abs(stepAmount));
+                    await PocketService.updatePocketBalance(creditPocketId, Math.abs(stepAmount));
                 }
 
                 // Ghi PocketEntry (dấu vết bút toán bất biến)
@@ -555,7 +435,7 @@ module.exports = {
 
             // Cập nhật Trail done + mở khoá ví
             await TransactionTrail.update({ transRefId }, { status: 'done' });
-            await unlockPocket(senderPocketId);
+            await PocketService.unlockPocket(senderPocketId);
 
             // Nếu là billerTrans → gọi payment SAU KHI đã ghi sổ (thu tiền trước)
             if (service.action === 'billerTrans') {
@@ -633,7 +513,7 @@ module.exports = {
             console.error('Transaction Verify Error:', error);
 
             // Mở khoá ví ở mọi lối ra lỗi
-            if (senderPocketId) await unlockPocket(senderPocketId);
+            if (senderPocketId) await PocketService.unlockPocket(senderPocketId);
 
             // Đánh dấu Trail failed
             try {

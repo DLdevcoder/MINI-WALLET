@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Power, Settings, ShieldCheck, Activity, X, MoreVertical } from 'lucide-react';
+import { Plus, Power, Settings, ShieldCheck, Layers, X, MoreVertical } from 'lucide-react';
 import './Services.css';
 
 export default function Services() {
@@ -130,7 +130,7 @@ export default function Services() {
 
       <div className="stats-row">
         <div className="stat-card glass-card">
-          <div className="stat-icon bg-blue"><Activity size={24} /></div>
+          <div className="stat-icon bg-blue"><Layers size={24} /></div>
           <div className="stat-info">
             <span className="stat-label">Tổng số dịch vụ</span>
             <span className="stat-value">{services.length}</span>

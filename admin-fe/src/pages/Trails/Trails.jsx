@@ -14,7 +14,7 @@ export default function Trails() {
 
   const fetchTrails = () => {
     setLoading(true);
-    
+
     const payload = { page, limit };
     if (searchRef) payload.transRefId = searchRef;
     if (statusFilter) payload.status = statusFilter;
@@ -57,7 +57,7 @@ export default function Trails() {
     <div className="trails-page fade-in">
       <div className="page-header">
         <div className="header-left">
-          <h1 className="page-title">Tra Cứu Giao Dịch (Trails)</h1>
+          <h1 className="page-title">Tra Cứu Giao Dịch</h1>
           <p className="page-subtitle">Nhật ký chi tiết các giao dịch đang diễn ra, thành công và thất bại</p>
         </div>
       </div>
@@ -76,7 +76,7 @@ export default function Trails() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <Filter size={18} style={{ color: 'var(--text-secondary)' }} />
-          <select 
+          <select
             className="status-filter"
             value={statusFilter}
             onChange={(e) => {
@@ -120,7 +120,7 @@ export default function Trails() {
               ) : trails.map((trail) => {
                 const serviceCode = trail.inputMessage?.serviceCode || 'UNKNOWN';
                 const stepCount = trail.transStepLog ? trail.transStepLog.length : 0;
-                
+
                 return (
                   <tr key={trail.id}>
                     <td style={{ color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
@@ -142,7 +142,7 @@ export default function Trails() {
                       {stepCount} bước đã ghi nhận
                     </td>
                     <td>
-                      <button 
+                      <button
                         className="btn-view"
                         onClick={() => setSelectedTrail(trail)}
                         title="Xem chi tiết kỹ thuật"
@@ -160,14 +160,14 @@ export default function Trails() {
         <div className="pagination">
           <span className="page-info">Hiển thị {trails.length} trên tổng số {total} dòng</span>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button 
-              className="page-btn" 
+            <button
+              className="page-btn"
               disabled={page === 1}
               onClick={() => setPage(page - 1)}
             >
               Trước
             </button>
-            <button 
+            <button
               className="page-btn"
               disabled={page === totalPages}
               onClick={() => setPage(page + 1)}

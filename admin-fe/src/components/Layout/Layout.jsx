@@ -1,18 +1,17 @@
 import { useState } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Settings2, 
-  Users, 
-  CreditCard, 
-  LogOut, 
-  Menu, 
+import {
+  Settings2,
+  Users,
+  CreditCard,
+  LogOut,
+  Menu,
   X,
   Bell,
   Search,
   ChevronDown,
   Wallet,
-  Activity,
+  FileSearch,
   Store
 } from 'lucide-react';
 import './Layout.css';
@@ -29,13 +28,12 @@ export default function Layout() {
   };
 
   const navItems = [
-    { path: '/dashboard', label: 'Tổng quan', icon: LayoutDashboard },
     { path: '/dashboard/services', label: 'Quản lý Services', icon: Settings2 },
-    { path: '/dashboard/pockets', label: 'Quản lý Ví', icon: Wallet },
+    { path: '/dashboard/pockets', label: 'Quản lý ví', icon: Wallet },
     { path: '/dashboard/customers', label: 'Khách hàng', icon: Users },
-    { path: '/dashboard/trails', label: 'Tra cứu GD (Trails)', icon: Activity },
-    { path: '/dashboard/transactions', label: 'Biên lai (History)', icon: CreditCard },
-    { path: '/dashboard/billers', label: 'Đối tác (Billers)', icon: Store }
+    { path: '/dashboard/trails', label: 'Transaction Trails', icon: FileSearch },
+    { path: '/dashboard/transactions', label: 'Transaction History', icon: CreditCard },
+    { path: '/dashboard/billers', label: 'Quản lý Billers', icon: Store }
   ];
 
   const currentPathName = navItems.find(item => location.pathname.startsWith(item.path))?.label || 'Bảng điều khiển';
@@ -43,7 +41,7 @@ export default function Layout() {
   return (
     <div className="layout-wrapper">
       {/* Sidebar Overlay for mobile */}
-      <div 
+      <div
         className={`sidebar-overlay ${sidebarOpen ? 'active' : ''}`}
         onClick={() => setSidebarOpen(false)}
       ></div>
@@ -84,31 +82,7 @@ export default function Layout() {
 
       {/* Main Content Area */}
       <div className="main-content">
-        {/* Topbar */}
-        <header className="topbar glass-card">
-          <div className="topbar-left">
-            <button className="menu-btn" onClick={() => setSidebarOpen(true)}>
-              <Menu size={24} />
-            </button>
-            <h1 className="page-title">{currentPathName}</h1>
-          </div>
 
-          <div className="topbar-right">
-            <div className="search-bar">
-              <Search size={18} className="search-icon" />
-              <input type="text" placeholder="Tìm kiếm..." className="search-input" />
-            </div>
-            <button className="icon-btn">
-              <Bell size={20} />
-              <span className="notification-badge">3</span>
-            </button>
-            <div className="user-profile">
-              <div className="avatar">A</div>
-              <span className="user-name">Admin</span>
-              <ChevronDown size={16} />
-            </div>
-          </div>
-        </header>
 
         {/* Dynamic Page Content */}
         <main className="page-content">

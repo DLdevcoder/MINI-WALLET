@@ -1,0 +1,284 @@
+{
+  "info": {
+    "_postman_id": "mini-wallet-p2p-collection",
+    "name": "Mini Wallet — P2P Transfer",
+    "description": "Luồng test P2P đầy đủ: Đăng ký → Đăng nhập → Request → Confirm → Verify → Kiểm tra số dư",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:1337", "type": "string" },
+    { "key": "token_sender", "value": "", "type": "string" },
+    { "key": "transRefId", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "0. Setup",
+      "item": [
+        {
+          "name": "Đăng ký Sender (A)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/auth/customer/register", "host": ["{{base_url}}"], "path": ["auth", "customer", "register"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"0901111111\",\n  \"pin\": \"123456\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Đăng ký Receiver (B)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/auth/customer/register", "host": ["{{base_url}}"], "path": ["auth", "customer", "register"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"0902222222\",\n  \"pin\": \"123456\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Đăng nhập Sender (A) → lưu token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res && res.data && res.data.token) {",
+                  "    pm.collectionVariables.set('token_sender', res.data.token);",
+                  "    console.log('✅ Token saved:', res.data.token);",
+                  "} else {",
+                  "    console.error('❌ Không lấy được token. Response:', JSON.stringify(res));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/auth/customer/login", "host": ["{{base_url}}"], "path": ["auth", "customer", "login"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"0901111111\",\n  \"pin\": \"123456\"\n}"
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "P2P Transfer — 3 bước",
+      "item": [
+        {
+          "name": "Bước 1 — REQUEST (tạo giao dịch)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res && res.data && res.data.transRefId) {",
+                  "    pm.collectionVariables.set('transRefId', res.data.transRefId);",
+                  "    console.log('✅ transRefId saved:', res.data.transRefId);",
+                  "    console.log('   amount   :', res.data.amount);",
+                  "    console.log('   fee      :', res.data.fee);",
+                  "    console.log('   total    :', res.data.totalAmount);",
+                  "} else {",
+                  "    console.error('❌ REQUEST thất bại:', JSON.stringify(res));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token_sender}}" }
+            ],
+            "url": { "raw": "{{base_url}}/transaction/request", "host": ["{{base_url}}"], "path": ["transaction", "request"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serviceCode\": \"P2P_TRANSFER\",\n  \"parameters\": {\n    \"receiverPhone\": \"0902222222\",\n    \"amount\": 50000\n  }\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Bước 2 — CONFIRM (lấy authMethod)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token_sender}}" }
+            ],
+            "url": { "raw": "{{base_url}}/transaction/confirm", "host": ["{{base_url}}"], "path": ["transaction", "confirm"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transRefId\": \"{{transRefId}}\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Bước 3 — VERIFY (nhập PIN → tiền chạy)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token_sender}}" }
+            ],
+            "url": { "raw": "{{base_url}}/transaction/verify", "host": ["{{base_url}}"], "path": ["transaction", "verify"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transRefId\": \"{{transRefId}}\",\n  \"pin\": \"123456\"\n}"
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Kiểm tra kết quả",
+      "item": [
+        {
+          "name": "Kiểm tra số dư Sender (A)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token_sender}}" }
+            ],
+            "url": { "raw": "{{base_url}}/pockets/me", "host": ["{{base_url}}"], "path": ["pockets", "me"] },
+            "body": { "mode": "raw", "raw": "{}" }
+          },
+          "response": []
+        },
+        {
+          "name": "Lịch sử giao dịch Sender (A)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token_sender}}" }
+            ],
+            "url": { "raw": "{{base_url}}/transactions/me", "host": ["{{base_url}}"], "path": ["transactions", "me"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"page\": 1,\n  \"limit\": 10\n}"
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "❌ Test lỗi",
+      "item": [
+        {
+          "name": "PIN sai định dạng (5 số)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token_sender}}" }
+            ],
+            "url": { "raw": "{{base_url}}/transaction/verify", "host": ["{{base_url}}"], "path": ["transaction", "verify"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transRefId\": \"{{transRefId}}\",\n  \"pin\": \"12345\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PIN sai (đúng định dạng nhưng sai mã)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token_sender}}" }
+            ],
+            "url": { "raw": "{{base_url}}/transaction/verify", "host": ["{{base_url}}"], "path": ["transaction", "verify"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transRefId\": \"{{transRefId}}\",\n  \"pin\": \"999999\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Chuyển tiền cho chính mình",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token_sender}}" }
+            ],
+            "url": { "raw": "{{base_url}}/transaction/request", "host": ["{{base_url}}"], "path": ["transaction", "request"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serviceCode\": \"P2P_TRANSFER\",\n  \"parameters\": {\n    \"receiverPhone\": \"0901111111\",\n    \"amount\": 10000\n  }\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Số tiền vượt số dư",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token_sender}}" }
+            ],
+            "url": { "raw": "{{base_url}}/transaction/request", "host": ["{{base_url}}"], "path": ["transaction", "request"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serviceCode\": \"P2P_TRANSFER\",\n  \"parameters\": {\n    \"receiverPhone\": \"0902222222\",\n    \"amount\": 999999999\n  }\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Người nhận không tồn tại",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token_sender}}" }
+            ],
+            "url": { "raw": "{{base_url}}/transaction/request", "host": ["{{base_url}}"], "path": ["transaction", "request"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serviceCode\": \"P2P_TRANSFER\",\n  \"parameters\": {\n    \"receiverPhone\": \"0909999999\",\n    \"amount\": 10000\n  }\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Gọi VERIFY với transRefId sai",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token_sender}}" }
+            ],
+            "url": { "raw": "{{base_url}}/transaction/verify", "host": ["{{base_url}}"], "path": ["transaction", "verify"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transRefId\": \"TXN_KHONG_TON_TAI\",\n  \"pin\": \"123456\"\n}"
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

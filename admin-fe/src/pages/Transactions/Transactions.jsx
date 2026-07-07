@@ -11,7 +11,7 @@ export default function Transactions() {
 
   const fetchTransactions = () => {
     setLoading(true);
-    
+
     fetch('http://localhost:1337/admin/transactions', {
       method: 'POST',
       headers: {
@@ -47,7 +47,7 @@ export default function Transactions() {
     <div className="transactions-page fade-in">
       <div className="page-header">
         <div className="header-left">
-          <h1 className="page-title">Biên Lai Giao Dịch (History)</h1>
+          <h1 className="page-title">Lịch sử giao dịch</h1>
           <p className="page-subtitle">Danh sách các giao dịch đã xử lý thành công và chốt số dư</p>
         </div>
       </div>
@@ -79,7 +79,7 @@ export default function Transactions() {
                 </tr>
               ) : transactions.map((tx) => {
                 const serviceCode = tx.service?.code || 'UNKNOWN';
-                
+
                 return (
                   <tr key={tx.id}>
                     <td style={{ color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
@@ -109,7 +109,7 @@ export default function Transactions() {
                     </td>
                     <td>
                       <span className={`badge ${tx.status || 'done'}`}>
-                        {tx.status === 'done' ? <><CheckCircle2 size={12} style={{marginRight: 4, display: 'inline-block', verticalAlign: 'middle'}}/> THÀNH CÔNG</> : <><XCircle size={12} style={{marginRight: 4, display: 'inline-block', verticalAlign: 'middle'}}/> THẤT BẠI</>}
+                        {tx.status === 'done' ? <><CheckCircle2 size={12} style={{ marginRight: 4, display: 'inline-block', verticalAlign: 'middle' }} /> THÀNH CÔNG</> : <><XCircle size={12} style={{ marginRight: 4, display: 'inline-block', verticalAlign: 'middle' }} /> THẤT BẠI</>}
                       </span>
                     </td>
                   </tr>
@@ -122,14 +122,14 @@ export default function Transactions() {
         <div className="pagination">
           <span className="page-info">Hiển thị {transactions.length} trên tổng số {total} giao dịch</span>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button 
-              className="page-btn" 
+            <button
+              className="page-btn"
               disabled={page === 1}
               onClick={() => setPage(page - 1)}
             >
               Trước
             </button>
-            <button 
+            <button
               className="page-btn"
               disabled={page === totalPages}
               onClick={() => setPage(page + 1)}

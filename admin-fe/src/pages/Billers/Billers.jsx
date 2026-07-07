@@ -5,14 +5,14 @@ import './Billers.css';
 export default function Billers() {
   const [billers, setBillers] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Modal state
   const [showModal, setShowModal] = useState(false);
   const [editingBillerId, setEditingBillerId] = useState(null);
-  const [billerForm, setBillerForm] = useState({ 
-    billerCode: '', 
-    name: '', 
-    inquiryUrl: 'http://localhost:1337/mock/evn/inquiry', 
+  const [billerForm, setBillerForm] = useState({
+    billerCode: '',
+    name: '',
+    inquiryUrl: 'http://localhost:1337/mock/evn/inquiry',
     paymentUrl: 'http://localhost:1337/mock/evn/payment',
     status: 'active'
   });
@@ -44,10 +44,10 @@ export default function Billers() {
 
   const openCreateModal = () => {
     setEditingBillerId(null);
-    setBillerForm({ 
-      billerCode: '', 
-      name: '', 
-      inquiryUrl: 'http://localhost:1337/mock/evn/inquiry', 
+    setBillerForm({
+      billerCode: '',
+      name: '',
+      inquiryUrl: 'http://localhost:1337/mock/evn/inquiry',
       paymentUrl: 'http://localhost:1337/mock/evn/payment',
       status: 'active'
     });
@@ -71,7 +71,7 @@ export default function Billers() {
       alert("Vui lòng điền đủ Mã đối tác và Tên đối tác!");
       return;
     }
-    
+
     setIsSubmitting(true);
     const endpoint = editingBillerId ? '/admin/billers/update' : '/admin/billers/create';
     const payload = editingBillerId ? { ...billerForm, id: editingBillerId } : billerForm;
@@ -84,28 +84,28 @@ export default function Billers() {
       },
       body: JSON.stringify(payload)
     })
-    .then(res => res.json())
-    .then(data => {
-      if (data.err !== 200) {
-        alert(data.message || 'Có lỗi xảy ra');
-      } else {
-        setShowModal(false);
-        fetchBillers();
-      }
-    })
-    .catch(err => {
-      console.error(err);
-      alert('Lỗi kết nối');
-    })
-    .finally(() => setIsSubmitting(false));
+      .then(res => res.json())
+      .then(data => {
+        if (data.err !== 200) {
+          alert(data.message || 'Có lỗi xảy ra');
+        } else {
+          setShowModal(false);
+          fetchBillers();
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        alert('Lỗi kết nối');
+      })
+      .finally(() => setIsSubmitting(false));
   };
 
   return (
     <div className="billers-page fade-in">
       <div className="page-header">
         <div className="header-left">
-          <h1 className="page-title">Quản Lý Biller (Đối tác)</h1>
-          <p className="page-subtitle">Quản lý các nhà cung cấp dịch vụ (Điện, Nước, Internet...)</p>
+          <h1 className="page-title">Quản Lý Biller</h1>
+          <p className="page-subtitle">Quản lý các nhà cung cấp dịch vụ</p>
         </div>
         <div className="header-right">
           <button className="btn btn-primary" onClick={openCreateModal}>
@@ -142,7 +142,7 @@ export default function Billers() {
               ) : billers.map((biller) => {
                 const pocketId = biller.pocket?.id || 'Chưa tạo';
                 const pocketBal = biller.pocket?.balance || 0;
-                
+
                 return (
                   <tr key={biller.id}>
                     <td style={{ fontWeight: 600, fontFamily: 'monospace', color: '#a5b4fc' }}>
@@ -150,14 +150,13 @@ export default function Billers() {
                     </td>
                     <td style={{ fontWeight: 500, color: 'var(--text-primary)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <Store size={16} style={{ color: 'var(--text-secondary)' }} />
                         {biller.name}
                       </div>
                     </td>
                     <td>
                       <div className="api-links">
-                        {biller.inquiryUrl ? <div className="api-link-item"><LinkIcon size={12}/> Vấn tin</div> : ''}
-                        {biller.paymentUrl ? <div className="api-link-item success"><LinkIcon size={12}/> Thanh toán</div> : ''}
+                        {biller.inquiryUrl ? <div className="api-link-item"><LinkIcon size={12} /> Vấn tin</div> : ''}
+                        {biller.paymentUrl ? <div className="api-link-item success"><LinkIcon size={12} /> Thanh toán</div> : ''}
                       </div>
                     </td>
                     <td>
@@ -170,8 +169,8 @@ export default function Billers() {
                       </span>
                     </td>
                     <td>
-                      <button 
-                        className="icon-btn-sm" 
+                      <button
+                        className="icon-btn-sm"
                         title="Sửa thông tin"
                         onClick={() => openEditModal(biller)}
                       >
@@ -197,26 +196,26 @@ export default function Billers() {
               </button>
             </div>
             <div className="modal-body">
-              
+
               <div className="form-group">
                 <label>Tên Đối Tác (Biller Name)</label>
-                <input 
-                  type="text" 
-                  className="form-input w-full" 
+                <input
+                  type="text"
+                  className="form-input w-full"
                   placeholder="VD: Điện lực EVN Miền Bắc"
                   value={billerForm.name}
-                  onChange={(e) => setBillerForm({...billerForm, name: e.target.value})}
+                  onChange={(e) => setBillerForm({ ...billerForm, name: e.target.value })}
                 />
               </div>
 
               <div className="form-group">
                 <label>Mã Đối Tác (Biller Code)</label>
-                <input 
-                  type="text" 
-                  className="form-input w-full" 
+                <input
+                  type="text"
+                  className="form-input w-full"
                   placeholder="VD: BILLER_EVN"
                   value={billerForm.billerCode}
-                  onChange={(e) => setBillerForm({...billerForm, billerCode: e.target.value.toUpperCase()})}
+                  onChange={(e) => setBillerForm({ ...billerForm, billerCode: e.target.value.toUpperCase() })}
                   disabled={editingBillerId !== null}
                 />
                 <span className="input-hint">Viết hoa, không dấu. {editingBillerId ? 'Không thể đổi mã sau khi tạo.' : 'Hệ thống sẽ tự tạo 1 Ví (Pocket) dùng chung mã này.'}</span>
@@ -224,33 +223,33 @@ export default function Billers() {
 
               <div className="form-group">
                 <label>API Vấn tin Hóa đơn (Inquiry URL)</label>
-                <input 
-                  type="text" 
-                  className="form-input w-full" 
+                <input
+                  type="text"
+                  className="form-input w-full"
                   placeholder="Nhập đường dẫn API"
                   value={billerForm.inquiryUrl}
-                  onChange={(e) => setBillerForm({...billerForm, inquiryUrl: e.target.value})}
+                  onChange={(e) => setBillerForm({ ...billerForm, inquiryUrl: e.target.value })}
                 />
               </div>
 
               <div className="form-group">
                 <label>API Gạch nợ (Payment URL)</label>
-                <input 
-                  type="text" 
-                  className="form-input w-full" 
+                <input
+                  type="text"
+                  className="form-input w-full"
                   placeholder="Nhập đường dẫn API"
                   value={billerForm.paymentUrl}
-                  onChange={(e) => setBillerForm({...billerForm, paymentUrl: e.target.value})}
+                  onChange={(e) => setBillerForm({ ...billerForm, paymentUrl: e.target.value })}
                 />
               </div>
 
               {editingBillerId && (
                 <div className="form-group">
                   <label>Trạng thái</label>
-                  <select 
+                  <select
                     className="form-input w-full"
                     value={billerForm.status}
-                    onChange={(e) => setBillerForm({...billerForm, status: e.target.value})}
+                    onChange={(e) => setBillerForm({ ...billerForm, status: e.target.value })}
                   >
                     <option value="active">Hoạt động</option>
                     <option value="inactive">Đã khóa</option>

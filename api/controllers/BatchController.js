@@ -4,79 +4,7 @@ const crypto = require('crypto');
 
 const ChecksumService = require('../services/ChecksumService');
 
-function lockPocket(pocketId) {
-    return new Promise((resolve, reject) => {
-        Pocket.native(function (err, collection) {
-            if (err) return reject(err);
-
-            let query;
-            try {
-                const mongodb = require('mongodb');
-                const ObjectId = mongodb.ObjectID || mongodb.ObjectId;
-                query = { _id: new ObjectId(pocketId), status: 'active' };
-            } catch (e) {
-                query = { _id: pocketId, status: 'active' };
-            }
-
-            collection.updateOne(
-                query,
-                { $set: { status: 'inProgress' } },
-                function (err2, result) {
-                    if (err2) return reject(err2);
-                    const matched = result.matchedCount !== undefined ? result.matchedCount : result.result.n;
-                    resolve(matched === 1);
-                }
-            );
-        });
-    });
-}
-
-function unlockPocket(pocketId) {
-    return Pocket.update({ id: pocketId }, { status: 'active' }).catch(() => { });
-}
-
-function updatePocketBalance(pocketId, amountChange) {
-    return new Promise((resolve, reject) => {
-        Pocket.native(function (err, collection) {
-            if (err) return reject(err);
-
-            let objectId;
-            try {
-                const mongodb = require('mongodb');
-                const ObjectId = mongodb.ObjectID || mongodb.ObjectId;
-                objectId = new ObjectId(pocketId);
-            } catch (e) {
-                objectId = pocketId;
-            }
-
-            collection.findOneAndUpdate(
-                { _id: objectId },
-                { $inc: { balance: amountChange } },
-                { returnOriginal: false, returnDocument: 'after' },
-                function (err, result) {
-                    if (err) return reject(err);
-
-                    const doc = result.value || result;
-                    if (!doc || doc.balance === undefined) {
-                        return reject(new Error('Pocket not found or missing balance'));
-                    }
-
-                    const newBalance = doc.balance;
-                    const newChecksum = ChecksumService.compute(newBalance, doc.user);
-
-                    collection.updateOne(
-                        { _id: objectId },
-                        { $set: { checksum: newChecksum } },
-                        function (err2) {
-                            if (err2) return reject(err2);
-                            resolve({ newBalance, newChecksum });
-                        }
-                    );
-                }
-            );
-        });
-    });
-}
+const PocketService = require('../services/PocketService');
 
 module.exports = {
 
@@ -166,19 +94,19 @@ module.exports = {
                 return res.error(RespCode.DATA_INTEGRITY_ERROR);
             }
 
-            const locked = await lockPocket(merchantPocketId);
+            const locked = await PocketService.lockPocket(merchantPocketId);
             if (!locked) {
                 return res.error(RespCode.INVALID_TRANS_STATE);
             }
 
             // 4. Kiểm tra số dư tổng
             if ((merchantPocket.balance || 0) < totalAmount) {
-                await unlockPocket(merchantPocketId);
+                await PocketService.unlockPocket(merchantPocketId);
                 return res.error(RespCode.INSUFFICIENT_BALANCE);
             }
 
             // 5. Trừ tổng tiền Merchant + ghi PocketEntry tổng (debit phía Merchant)
-            await updatePocketBalance(merchantPocketId, -totalAmount);
+            await PocketService.updatePocketBalance(merchantPocketId, -totalAmount);
 
             await PocketEntry.create({
                 transRefId: transRefId,
@@ -210,7 +138,7 @@ module.exports = {
                     });
 
                     // Cộng tiền cho Receiver
-                    await updatePocketBalance(t.receiverPocket, t.amount);
+                    await PocketService.updatePocketBalance(t.receiverPocket, t.amount);
 
                     // Bút toán credit: merchant → receiver (từng dòng rõ ràng)
                     await PocketEntry.create({
@@ -245,7 +173,7 @@ module.exports = {
             });
 
             // 7. Mở khoá ví
-            await unlockPocket(merchantPocketId);
+            await PocketService.unlockPocket(merchantPocketId);
 
             return res.ok({
                 batchRefId: transRefId,
@@ -257,7 +185,7 @@ module.exports = {
         } catch (error) {
             console.error('Batch Payout Error:', error);
             if (merchantPocketId) {
-                await unlockPocket(merchantPocketId);
+                await PocketService.unlockPocket(merchantPocketId);
             }
             return res.error(RespCode.SYSTEM_ERROR);
         }
