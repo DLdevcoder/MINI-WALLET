@@ -37,6 +37,11 @@ module.exports.routes = {
   'POST /admin/pockets/create': 'PocketController.adminCreate',
   'POST /admin/pockets/topup': 'PocketController.adminTopup',
 
+  // Admin Billers Management
+  'POST /admin/billers/list': 'BillerController.listBillers',
+  'POST /admin/billers/create': 'BillerController.createBiller',
+  'POST /admin/billers/update': 'BillerController.updateBiller',
+
   // Mock Biller (giả lập hệ thống đối tác bên ngoài)
   'POST /mock/evn/inquiry': 'MockBillerController.inquiry',
   'POST /mock/evn/payment': 'MockBillerController.payment',

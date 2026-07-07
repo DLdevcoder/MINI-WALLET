@@ -6,6 +6,7 @@ import Pockets from './pages/Pockets/Pockets';
 import Customers from './pages/Customers/Customers';
 import Trails from './pages/Trails/Trails';
 import Transactions from './pages/Transactions/Transactions';
+import Billers from './pages/Billers/Billers';
 import Layout from './components/Layout/Layout';
 import './App.css';
 
@@ -41,6 +42,7 @@ function App() {
           <Route path="customers" element={<Customers />} />
           <Route path="trails" element={<Trails />} />
           <Route path="transactions" element={<Transactions />} />
+          <Route path="billers" element={<Billers />} />
         </Route>
       </Routes>
     </Router>
