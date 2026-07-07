@@ -5,6 +5,7 @@ import TransactionDesign from './pages/TransactionDesign/TransactionDesign';
 import Pockets from './pages/Pockets/Pockets';
 import Customers from './pages/Customers/Customers';
 import Trails from './pages/Trails/Trails';
+import Transactions from './pages/Transactions/Transactions';
 import Layout from './components/Layout/Layout';
 import './App.css';
 
@@ -39,7 +40,7 @@ function App() {
           <Route path="pockets" element={<Pockets />} />
           <Route path="customers" element={<Customers />} />
           <Route path="trails" element={<Trails />} />
-          <Route path="transactions" element={<div style={{ color: 'white' }}>Transaction Management Page (Sắp ra mắt)</div>} />
+          <Route path="transactions" element={<Transactions />} />
         </Route>
       </Routes>
     </Router>

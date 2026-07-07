@@ -243,7 +243,7 @@ module.exports = {
             let query = {};
             if (req.body.status) query.status = req.body.status;
 
-            const transactions = await Transaction.find(query).sort('createdAt DESC').skip(skip).limit(limit);
+            const transactions = await Transaction.find(query).populate('service').sort('createdAt DESC').skip(skip).limit(limit);
             const total = await Transaction.count(query);
 
             return res.ok({
