@@ -18,6 +18,7 @@ module.exports.routes = {
   // ================= ADMIN & CONFIG ROUTES =================
   'POST /admin/services/list': 'ServiceConfigController.listServices',
   'POST /admin/services/create': 'ServiceConfigController.createService',
+  'POST /admin/services/update': 'ServiceConfigController.updateService',
   'POST /admin/services/toggle': 'ServiceConfigController.toggleServiceStatus',
   'POST /admin/services/config/get': 'ServiceConfigController.getServiceConfig',
   'POST /admin/services/config/save': 'ServiceConfigController.saveServiceConfig',

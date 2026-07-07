@@ -46,6 +46,28 @@ module.exports = {
     }
   },
 
+  updateService: async function (req, res) {
+    try {
+      const { serviceId, code, name, authMethod } = req.body;
+      if (!serviceId) return res.badRequest({ message: 'Thiếu serviceId' });
+      
+      const updateData = {};
+      if (code) updateData.code = code;
+      if (name) updateData.name = name;
+      if (authMethod) updateData.auth = { method: authMethod };
+
+      const updated = await Service.update({ id: serviceId }, updateData);
+      if (!updated || updated.length === 0) return res.badRequest({ message: 'Không tìm thấy service' });
+      
+      return res.ok(updated[0]);
+    } catch (err) {
+      if (err.code === 'E_UNIQUE') {
+         return res.badRequest({ message: 'Mã dịch vụ (Code) đã tồn tại!' });
+      }
+      return res.serverError(err);
+    }
+  },
+
   getServiceConfig: async function (req, res) {
     try {
       const serviceId = req.param('serviceId');

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Power, Settings, ShieldCheck, Activity, X } from 'lucide-react';
+import { Plus, Power, Settings, ShieldCheck, Activity, X, MoreVertical } from 'lucide-react';
 import './Services.css';
 
 export default function Services() {
@@ -9,6 +9,7 @@ export default function Services() {
   // Modal state
   const [showModal, setShowModal] = useState(false);
   const [newService, setNewService] = useState({ name: '', code: '', authMethod: 'NONE' });
+  const [editingServiceId, setEditingServiceId] = useState(null);
   const [createLoading, setCreateLoading] = useState(false);
 
   useEffect(() => {
@@ -37,20 +38,39 @@ export default function Services() {
     });
   };
 
-  const handleCreateService = () => {
+  const openEditModal = (service) => {
+    setEditingServiceId(service.id);
+    setNewService({
+      name: service.name,
+      code: service.code,
+      authMethod: service.auth?.method || 'NONE'
+    });
+    setShowModal(true);
+  };
+
+  const openCreateModal = () => {
+    setEditingServiceId(null);
+    setNewService({ name: '', code: '', authMethod: 'NONE' });
+    setShowModal(true);
+  };
+
+  const handleSubmitService = () => {
     if (!newService.name || !newService.code) {
       alert("Vui lòng điền đủ Tên và Mã Dịch Vụ!");
       return;
     }
     
     setCreateLoading(true);
-    fetch('/admin/services/create', {
+    const endpoint = editingServiceId ? '/admin/services/update' : '/admin/services/create';
+    const payload = editingServiceId ? { ...newService, serviceId: editingServiceId } : newService;
+
+    fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
       },
-      body: JSON.stringify(newService)
+      body: JSON.stringify(payload)
     })
     .then(res => res.json())
     .then(data => {
@@ -59,6 +79,7 @@ export default function Services() {
       } else {
         setShowModal(false);
         setNewService({ name: '', code: '', authMethod: 'NONE' });
+        setEditingServiceId(null);
         fetchServices(); // Refresh list
       }
       setCreateLoading(false);
@@ -101,7 +122,7 @@ export default function Services() {
           <h2 className="page-title">Quản lý Services</h2>
           <p className="page-desc">Nơi khởi tạo và cấu hình các loại giao dịch của hệ thống (Config-Driven)</p>
         </div>
-        <button className="btn btn-primary create-btn" onClick={() => setShowModal(true)}>
+        <button className="btn btn-primary create-btn" onClick={openCreateModal}>
           <Plus size={18} />
           <span>Tạo Dịch Vụ Mới</span>
         </button>
@@ -164,10 +185,18 @@ export default function Services() {
                     </button>
                     <button 
                       className="icon-btn-sm" 
+                      title="Sửa thông tin dịch vụ"
+                      onClick={() => openEditModal(service)}
+                      style={{ marginRight: '0.25rem' }}
+                    >
+                      <Settings size={18} style={{ color: 'var(--text-secondary)' }} />
+                    </button>
+                    <button 
+                      className="icon-btn-sm" 
                       title="Cấu hình luồng (Transaction Design)"
                       onClick={() => window.location.href = `/dashboard/services/${service.id}/design`}
                     >
-                      <Settings size={18} />
+                      <MoreVertical size={18} />
                     </button>
                   </div>
                 </td>
@@ -185,13 +214,17 @@ export default function Services() {
         <div className="modal-overlay fade-in">
           <div className="modal-content glass-card">
             <div className="modal-header">
-              <h3>Tạo Dịch Vụ Mới</h3>
+              <h3>{editingServiceId ? 'Sửa Dịch Vụ' : 'Tạo Dịch Vụ Mới'}</h3>
               <button className="icon-btn-sm" onClick={() => setShowModal(false)}>
                 <X size={20} />
               </button>
             </div>
             <div className="modal-body">
-              <p className="modal-desc">Khởi tạo một nghiệp vụ mới. Sau khi tạo, bạn cần vào phần Cấu hình luồng (Transaction Design) để thiết lập chi tiết.</p>
+              <p className="modal-desc">
+                {editingServiceId 
+                  ? 'Thay đổi thông tin cơ bản của dịch vụ.' 
+                  : 'Khởi tạo một nghiệp vụ mới. Sau khi tạo, bạn cần vào phần Cấu hình luồng (Transaction Design) để thiết lập chi tiết.'}
+              </p>
               
               <div className="form-group">
                 <label>Tên Dịch Vụ (Hiển thị cho User)</label>
@@ -213,7 +246,7 @@ export default function Services() {
                   value={newService.code}
                   onChange={(e) => setNewService({...newService, code: e.target.value.toUpperCase()})}
                 />
-                <span className="input-hint">Mã viết hoa, không dấu, không khoảng trắng.</span>
+                <span className="input-hint">Mã viết hoa, không dấu, không khoảng trắng. {editingServiceId && 'Lưu ý: Đổi mã có thể ảnh hưởng đến client đang gọi API!'}</span>
               </div>
 
               <div className="form-group">
@@ -225,15 +258,14 @@ export default function Services() {
                 >
                   <option value="NONE">Không yêu cầu (NONE) - Dành cho Officer</option>
                   <option value="PIN">Yêu cầu mã PIN - Dành cho Khách hàng</option>
-                  <option value="OTP">Yêu cầu OTP (Tương lai)</option>
                 </select>
               </div>
 
             </div>
             <div className="modal-footer">
               <button className="btn btn-secondary" onClick={() => setShowModal(false)}>Huỷ bỏ</button>
-              <button className="btn btn-primary" onClick={handleCreateService} disabled={createLoading}>
-                {createLoading ? 'Đang tạo...' : 'Tạo Dịch Vụ'}
+              <button className="btn btn-primary" onClick={handleSubmitService} disabled={createLoading}>
+                {createLoading ? 'Đang xử lý...' : (editingServiceId ? 'Cập Nhật' : 'Tạo Dịch Vụ')}
               </button>
             </div>
           </div>
