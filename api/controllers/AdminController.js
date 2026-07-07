@@ -302,6 +302,8 @@ module.exports = {
                     phone: c.phone,
                     pocketId: c.pocket,
                     balance: pocketMap[c.pocket] !== undefined ? pocketMap[c.pocket] : 0,
+                    status: c.status,
+                    failedPinAttempts: c.failedPinAttempts || 0,
                     createdAt: c.createdAt
                 };
             });
@@ -312,6 +314,25 @@ module.exports = {
             }, 'Lấy danh sách khách hàng thành công');
         } catch (error) {
             console.error('listCustomers Error:', error);
+            return res.error(RespCode.SYSTEM_ERROR);
+        }
+    },
+
+    toggleCustomerStatus: async function (req, res) {
+        try {
+            const { customerId, status } = req.body;
+            if (!customerId || !['active', 'locked'].includes(status)) {
+                return res.error(RespCode.INVALID_PARAMS);
+            }
+
+            const customer = await Customer.findOne({ id: customerId });
+            if (!customer) return res.error(RespCode.USER_NOT_FOUND);
+
+            await Customer.update({ id: customerId }, { status: status, failedPinAttempts: status === 'active' ? 0 : customer.failedPinAttempts });
+
+            return res.ok({ customerId, status }, 'Cập nhật trạng thái khách hàng thành công');
+        } catch (error) {
+            console.error('toggleCustomerStatus Error:', error);
             return res.error(RespCode.SYSTEM_ERROR);
         }
     },

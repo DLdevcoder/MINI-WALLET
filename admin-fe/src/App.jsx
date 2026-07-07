@@ -3,6 +3,7 @@ import Login from './pages/Login';
 import Services from './pages/Services/Services';
 import TransactionDesign from './pages/TransactionDesign/TransactionDesign';
 import Pockets from './pages/Pockets/Pockets';
+import Customers from './pages/Customers/Customers';
 import Layout from './components/Layout/Layout';
 import './App.css';
 
@@ -35,7 +36,7 @@ function App() {
           <Route path="services" element={<Services />} />
           <Route path="services/:id/design" element={<TransactionDesign />} />
           <Route path="pockets" element={<Pockets />} />
-          <Route path="customers" element={<div style={{ color: 'white' }}>Customer Management Page (Sắp ra mắt)</div>} />
+          <Route path="customers" element={<Customers />} />
           <Route path="transactions" element={<div style={{ color: 'white' }}>Transaction Management Page (Sắp ra mắt)</div>} />
         </Route>
       </Routes>

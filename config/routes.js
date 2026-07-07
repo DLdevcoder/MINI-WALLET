@@ -27,6 +27,7 @@ module.exports.routes = {
   'POST /admin/transactions': 'AdminController.listTransactions',
   'POST /admin/trails': 'AdminController.listTrails',
   'POST /admin/customers': 'AdminController.listCustomers',
+  'POST /admin/customers/status': 'AdminController.toggleCustomerStatus',
   'POST /admin/pocket-entries': 'AdminController.listPocketEntries',
   'POST /admin/pocket/unlock': 'AdminController.forceUnlockPocket',
   

@@ -240,18 +240,26 @@
 
 .form-input {
   width: 100%;
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 0.6rem 1rem;
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0.5rem;
   color: #fff;
-  padding: 0.6rem 0.875rem;
-  border-radius: 0.375rem;
-  font-size: 0.95rem;
-  transition: border-color 0.2s;
+  font-size: 0.9rem;
+  transition: all 0.2s;
 }
 
 .form-input:focus {
   outline: none;
-  border-color: var(--accent);
+  border-color: #818cf8;
+  background-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0 0 2px rgba(129, 140, 248, 0.2);
+}
+
+.form-input option {
+  background-color: #1e1e2d;
+  color: #fff;
+  padding: 0.5rem;
 }
 
 select.form-input {
