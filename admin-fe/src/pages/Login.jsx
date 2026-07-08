@@ -29,7 +29,7 @@ export default function Login() {
       if (data.err === 200) {
         localStorage.setItem('adminToken', data.data?.token);
         localStorage.setItem('adminUser', JSON.stringify(data.data?.officer || {}));
-        navigate('/dashboard');
+        navigate('/dashboard/services');
       } else {
         setErrorMsg(data.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại.');
       }
@@ -94,8 +94,8 @@ export default function Login() {
             </div>
           </div>
 
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             className="btn btn-primary btn-block login-btn"
             disabled={isLoading}
           >

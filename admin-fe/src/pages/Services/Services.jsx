@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Power, Settings, ShieldCheck, Layers, X, MoreVertical } from 'lucide-react';
+import { Plus, Power, Settings, ShieldCheck, Layers, X, BookOpenCheck } from 'lucide-react';
 import './Services.css';
 
 export default function Services() {
@@ -193,10 +193,11 @@ export default function Services() {
                     </button>
                     <button 
                       className="icon-btn-sm" 
-                      title="Cấu hình luồng (Transaction Design)"
+                      title="Cấu hình luồng giao dịch (Transaction Design)"
                       onClick={() => window.location.href = `/dashboard/services/${service.id}/design`}
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.3rem 0.6rem', background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.4)', borderRadius: '0.4rem', color: '#a5b4fc', fontSize: '0.8rem', fontWeight: 600 }}
                     >
-                      <MoreVertical size={18} />
+                      <BookOpenCheck size={16} /> Cấu hình Luồng
                     </button>
                   </div>
                 </td>

@@ -12,7 +12,7 @@ sails.load({ environment: 'development' }, async (err) => {
         console.log("Initial balance:", pocket[0].balance);
         
         const promises = [];
-        for(let i=0; i<10; i++) {
+        for(let i=0; i<1000; i++) {
             promises.push(PocketService.updatePocketBalance(pId, 10));
         }
         
@@ -20,7 +20,7 @@ sails.load({ environment: 'development' }, async (err) => {
         
         const finalPocket = await Pocket.findOne({id: pId});
         console.log("Final balance:", finalPocket.balance);
-        console.log("Expected balance:", pocket[0].balance + 100);
+        console.log("Expected balance:", pocket[0].balance + 10000);
         console.log("Checksum valid?", ChecksumService.verify(finalPocket));
         
     } catch(e) {

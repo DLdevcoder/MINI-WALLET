@@ -7,9 +7,6 @@ import {
   LogOut,
   Menu,
   X,
-  Bell,
-  Search,
-  ChevronDown,
   Wallet,
   FileSearch,
   Store

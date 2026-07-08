@@ -32,7 +32,7 @@ module.exports = {
 
   toggleServiceStatus: async function (req, res) {
     try {
-      const serviceId = req.param('serviceId');
+      const serviceId = req.body.serviceId;
       if (!serviceId) return res.badRequest({ message: 'Thiếu serviceId' });
       
       const service = await Service.findOne({ id: serviceId });
@@ -68,9 +68,12 @@ module.exports = {
     }
   },
 
+  /**
+   * Lấy toàn bộ cấu hình của một Service (dùng cho Transaction Design page)
+   */
   getServiceConfig: async function (req, res) {
     try {
-      const serviceId = req.param('serviceId');
+      const { serviceId } = req.body;
       if (!serviceId) return res.badRequest({ message: 'Missing serviceId' });
 
       const service = await Service.findOne({ id: serviceId });
@@ -80,30 +83,51 @@ module.exports = {
       const transValidations = await TransValidation.find({ service: serviceId }).sort('order ASC');
       const transDefinition = await TransDefinition.findOne({ service: serviceId });
 
+      // Load danh sách ví system/bank để dùng trong glStep wallet-type
+      const systemPockets = await Pocket.find({ client: 'system' });
+      const bankPockets = await Pocket.find({ client: 'bank' });
+      const walletPockets = systemPockets.concat(bankPockets).map(p => ({
+        user: p.user,
+        client: p.client,
+        balance: p.balance,
+        id: p.id
+      }));
+
       return res.ok({
         service: service,
         transFields: transFields,
         transValidations: transValidations,
-        transDefinition: transDefinition
+        transDefinition: transDefinition,
+        walletPockets: walletPockets
       });
     } catch (err) {
       return res.serverError(err);
     }
   },
 
+  /**
+   * Lưu toàn bộ cấu hình cho một Service
+   * fieldBuilder: [{ order, name, rule, source, variable }]
+   * glSteps: [{ order, amount, debitLevel, debitTarget, creditLevel, creditTarget }]
+   */
   saveServiceConfig: async function (req, res) {
     try {
-      const serviceId = req.param('serviceId');
+      const { serviceId } = req.body;
       const payload = req.body;
 
       if (!serviceId) return res.badRequest({ message: 'Missing serviceId' });
       const service = await Service.findOne({ id: serviceId });
       if (!service) return res.badRequest({ message: 'Service not found' });
 
-      // Cập nhật bảng Service (Fee, FieldBuilder)
-      if (payload.fee !== undefined) service.fee = payload.fee;
-      if (payload.fieldBuilder !== undefined) service.fieldBuilder = payload.fieldBuilder;
-      await Service.update({ id: serviceId }, { fee: service.fee, fieldBuilder: service.fieldBuilder });
+      // Cập nhật bảng Service (Fee, FieldBuilder, Auth)
+      const serviceUpdate = {};
+      if (payload.fee !== undefined) serviceUpdate.fee = payload.fee;
+      if (payload.fieldBuilder !== undefined) serviceUpdate.fieldBuilder = payload.fieldBuilder;
+      if (payload.authMethod !== undefined) serviceUpdate.auth = { method: payload.authMethod };
+      
+      if (Object.keys(serviceUpdate).length > 0) {
+        await Service.update({ id: serviceId }, serviceUpdate);
+      }
 
       // Cập nhật TransField
       if (payload.transFields && Array.isArray(payload.transFields)) {
@@ -116,7 +140,7 @@ module.exports = {
             fieldFormat: tf.fieldFormat || 'string',
             minLength: tf.minLength,
             maxLength: tf.maxLength,
-            regex: tf.regex,
+            regex: tf.regex || null,
             isRequired: tf.isRequired || false,
             order: i + 1,
             status: 'active'

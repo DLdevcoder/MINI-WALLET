@@ -78,9 +78,10 @@ async function runTest() {
             body: JSON.stringify({ 
                 serviceCode: 'P2P_TRANSFER', 
                 parameters: {
-                    amount: 50000, 
+                    amount: 10000, 
                     receiverPhone: '0906666666',
-                    description: 'Test P2P'
+                    description: 'Test P2P',
+                    myField: 'test'
                 }
             })
         })).json();

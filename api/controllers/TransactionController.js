@@ -250,6 +250,8 @@ module.exports = {
     verify: async function (req, res) {
         const { transRefId, pin } = req.body;
         let senderPocketId = null;
+        let completedUpdates = []; // Lưu lại lịch sử cập nhật để Rollback nếu cần
+        let createdEntries = []; // Lưu lại PocketEntry để xoá nếu Rollback
 
         try {
             if (!transRefId) {
@@ -399,14 +401,16 @@ module.exports = {
                 // Trừ ví nguồn
                 if (debitPocketId) {
                     await PocketService.updatePocketBalance(debitPocketId, -Math.abs(stepAmount));
+                    completedUpdates.push({ pocketId: debitPocketId, amount: Math.abs(stepAmount) }); // Để rollback thì CỘNG LẠI
                 }
                 // Cộng ví đích
                 if (creditPocketId) {
                     await PocketService.updatePocketBalance(creditPocketId, Math.abs(stepAmount));
+                    completedUpdates.push({ pocketId: creditPocketId, amount: -Math.abs(stepAmount) }); // Để rollback thì TRỪ LẠI
                 }
 
                 // Ghi PocketEntry (dấu vết bút toán bất biến)
-                await PocketEntry.create({
+                const entry = await PocketEntry.create({
                     transRefId: transRefId,
                     stepOrder: step.order,
                     debit: debitPocketId,
@@ -414,6 +418,7 @@ module.exports = {
                     amount: stepAmount,
                     status: 'settled'
                 });
+                createdEntries.push(entry.id);
 
                 // Cộng dồn tổng
                 finalTotalAmount += stepAmount;
@@ -486,9 +491,17 @@ module.exports = {
                 }
 
                 if (!paymentSuccess) {
-                    // Biller thất bại sau khi đã thu tiền → đánh dấu refund_pending
-                    await TransactionTrail.update({ transRefId }, { status: 'refund_pending' });
-                    console.warn(`[BillPayment] Biller từ chối/timeout. Trail=${transRefId} → refund_pending`);
+                    // Biller thất bại -> AUTO ROLLBACK NGAY LẬP TỨC
+                    for (let i = completedUpdates.length - 1; i >= 0; i--) {
+                        const rb = completedUpdates[i];
+                        await PocketService.updatePocketBalance(rb.pocketId, rb.amount);
+                    }
+                    await PocketEntry.destroy({ id: createdEntries });
+                    await Transaction.destroy({ transRefId: transRefId });
+                    
+                    await TransactionTrail.update({ transRefId }, { status: 'failed' });
+                    await PocketService.unlockPocket(senderPocketId);
+                    console.warn(`[BillPayment] Biller từ chối/timeout. ĐÃ AUTO ROLLBACK hoàn tiền. Trail=${transRefId} -> failed`);
                     return res.error(RespCode.BILLER_PAYMENT_FAILED);
                 }
 
@@ -511,6 +524,24 @@ module.exports = {
 
         } catch (error) {
             console.error('Transaction Verify Error:', error);
+
+            // AUTO ROLLBACK (Bảo toàn dòng tiền ACID)
+            if (completedUpdates && completedUpdates.length > 0) {
+                console.log(`[Auto-Rollback] Bắt đầu hoàn tiền cho ${completedUpdates.length} ví...`);
+                for (let i = completedUpdates.length - 1; i >= 0; i--) {
+                    const rb = completedUpdates[i];
+                    try {
+                        await PocketService.updatePocketBalance(rb.pocketId, rb.amount);
+                    } catch (e) {
+                        console.error(`[CRITICAL] Lỗi khi Rollback ví ${rb.pocketId}:`, e);
+                    }
+                }
+                try {
+                    if (createdEntries && createdEntries.length > 0) {
+                        await PocketEntry.destroy({ id: createdEntries });
+                    }
+                } catch(e) {}
+            }
 
             // Mở khoá ví ở mọi lối ra lỗi
             if (senderPocketId) await PocketService.unlockPocket(senderPocketId);
