@@ -3,12 +3,12 @@ import { Search, Eye, Filter, X, CheckCircle, XCircle, Clock, AlertCircle, Chevr
 import './Trails.css';
 
 const STATUS_CONFIG = {
-  pending:      { label: 'Đang xử lý', color: '#fbbf24', Icon: Clock },
-  inProgress:   { label: 'Đang ghi sổ', color: '#60a5fa', Icon: Clock },
-  done:         { label: 'Thành công', color: '#34d399', Icon: CheckCircle },
-  failed:       { label: 'Thất bại', color: '#f87171', Icon: XCircle },
+  pending: { label: 'Đang xử lý', color: '#fbbf24', Icon: Clock },
+  inProgress: { label: 'Đang ghi sổ', color: '#60a5fa', Icon: Clock },
+  done: { label: 'Thành công', color: '#34d399', Icon: CheckCircle },
+  failed: { label: 'Thất bại', color: '#f87171', Icon: XCircle },
   refund_pending: { label: 'Chờ hoàn tiền', color: '#f97316', Icon: AlertCircle },
-  init:         { label: 'Khởi tạo', color: '#94a3b8', Icon: Clock },
+  init: { label: 'Khởi tạo', color: '#94a3b8', Icon: Clock },
 };
 
 const formatMoney = (n) => n != null ? new Intl.NumberFormat('vi-VN').format(n) + ' ₫' : '—';
@@ -16,7 +16,7 @@ const formatMoney = (n) => n != null ? new Intl.NumberFormat('vi-VN').format(n) 
 function StatusBadge({ status }) {
   const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.init;
   return (
-    <span style={{ display:'inline-flex', alignItems:'center', gap:'0.3rem', background:`${cfg.color}20`, color: cfg.color, border:`1px solid ${cfg.color}50`, padding:'0.2rem 0.6rem', borderRadius:'1rem', fontSize:'0.78rem', fontWeight:600 }}>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: `${cfg.color}20`, color: cfg.color, border: `1px solid ${cfg.color}50`, padding: '0.2rem 0.6rem', borderRadius: '1rem', fontSize: '0.78rem', fontWeight: 600 }}>
       <cfg.Icon size={12} /> {cfg.label}
     </span>
   );
@@ -41,13 +41,13 @@ function TrailDetailModal({ trail, onClose }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content fade-in" style={{ maxWidth: 680, width: '95%' }} onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <h3 style={{margin:0}}>Chi tiết giao dịch</h3>
+          <h3 style={{ margin: 0 }}>Chi tiết giao dịch</h3>
           <button className="close-btn" onClick={onClose}><X size={22} /></button>
         </div>
-        <div className="modal-body" style={{padding:'1.5rem', display:'flex', flexDirection:'column', gap:'1.25rem'}}>
+        <div className="modal-body" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
           {/* Summary row */}
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'1rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
             <div className="detail-card">
               <div className="detail-label">Mã RefID</div>
               <div className="detail-val mono">{trail.transRefId}</div>
@@ -62,11 +62,11 @@ function TrailDetailModal({ trail, onClose }) {
             </div>
             <div className="detail-card">
               <div className="detail-label">Số tiền</div>
-              <div className="detail-val" style={{color:'#fbbf24',fontWeight:700}}>{formatMoney(amount)}</div>
+              <div className="detail-val" style={{ color: '#fbbf24', fontWeight: 700 }}>{formatMoney(amount)}</div>
             </div>
             <div className="detail-card">
               <div className="detail-label">Phí</div>
-              <div className="detail-val" style={{color:'#94a3b8'}}>{formatMoney(fee)}</div>
+              <div className="detail-val" style={{ color: '#94a3b8' }}>{formatMoney(fee)}</div>
             </div>
             {receiverPhone !== '—' && (
               <div className="detail-card">
@@ -88,25 +88,25 @@ function TrailDetailModal({ trail, onClose }) {
 
           {/* Timeline 3 steps */}
           <div>
-            <div style={{fontWeight:600,marginBottom:'0.75rem',color:'var(--text-secondary)',fontSize:'0.85rem',textTransform:'uppercase',letterSpacing:'0.05em'}}>Tiến trình xử lý</div>
-            <div style={{display:'flex',alignItems:'center',gap:'0'}}>
+            <div style={{ fontWeight: 600, marginBottom: '0.75rem', color: 'var(--text-secondary)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tiến trình xử lý</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0' }}>
               {steps.map((s, i) => (
-                <div key={s.key} style={{display:'flex',alignItems:'center',flex:1}}>
-                  <div style={{flex:1,background:s.done ? 'rgba(52,211,153,0.12)' : 'rgba(255,255,255,0.04)', border:`1px solid ${s.done ? 'rgba(52,211,153,0.4)' : 'rgba(255,255,255,0.1)'}`, borderRadius:'0.5rem', padding:'0.75rem',textAlign:'center'}}>
-                    {s.done ? <CheckCircle size={18} style={{color:'#34d399',marginBottom:'0.3rem'}} /> : <Clock size={18} style={{color:'#94a3b8',marginBottom:'0.3rem'}} />}
-                    <div style={{fontSize:'0.8rem',fontWeight:600,color:s.done?'#34d399':'#94a3b8'}}>{s.label}</div>
-                    <div style={{fontSize:'0.72rem',color:'var(--text-muted)',marginTop:'0.2rem'}}>{s.desc}</div>
+                <div key={s.key} style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+                  <div style={{ flex: 1, background: s.done ? 'rgba(52,211,153,0.12)' : 'rgba(255,255,255,0.04)', border: `1px solid ${s.done ? 'rgba(52,211,153,0.4)' : 'rgba(255,255,255,0.1)'}`, borderRadius: '0.5rem', padding: '0.75rem', textAlign: 'center' }}>
+                    {s.done ? <CheckCircle size={18} style={{ color: '#34d399', marginBottom: '0.3rem' }} /> : <Clock size={18} style={{ color: '#94a3b8', marginBottom: '0.3rem' }} />}
+                    <div style={{ fontSize: '0.8rem', fontWeight: 600, color: s.done ? '#34d399' : '#94a3b8' }}>{s.label}</div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>{s.desc}</div>
                   </div>
-                  {i < steps.length - 1 && <ChevronRight size={18} style={{color:'rgba(255,255,255,0.2)',flexShrink:0,margin:'0 0.25rem'}} />}
+                  {i < steps.length - 1 && <ChevronRight size={18} style={{ color: 'rgba(255,255,255,0.2)', flexShrink: 0, margin: '0 0.25rem' }} />}
                 </div>
               ))}
             </div>
           </div>
 
           {/* Raw JSON toggle */}
-          <details style={{background:'rgba(0,0,0,0.2)',borderRadius:'0.5rem',padding:'0.75rem'}}>
-            <summary style={{cursor:'pointer',fontSize:'0.85rem',color:'var(--text-secondary)',fontWeight:600}}>Xem dữ liệu kỹ thuật (JSON)</summary>
-            <pre style={{fontSize:'0.75rem',color:'#a5b4fc',marginTop:'0.75rem',overflow:'auto',maxHeight:300}}>{JSON.stringify(trail, null, 2)}</pre>
+          <details style={{ background: 'rgba(0,0,0,0.2)', borderRadius: '0.5rem', padding: '0.75rem' }}>
+            <summary style={{ cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Xem dữ liệu kỹ thuật (JSON)</summary>
+            <pre style={{ fontSize: '0.75rem', color: '#a5b4fc', marginTop: '0.75rem', overflow: 'auto', maxHeight: 300 }}>{JSON.stringify(trail, null, 2)}</pre>
           </details>
 
         </div>
@@ -163,7 +163,7 @@ export default function Trails() {
       <div className="page-header">
         <div className="header-left">
           <h1 className="page-title">Transaction Trails</h1>
-          <p className="page-subtitle">Nhật ký toàn bộ giao dịch — kể cả đang xử lý, thành công, thất bại</p>
+          <p className="page-subtitle">Nhật ký toàn bộ giao dịch</p>
         </div>
       </div>
 

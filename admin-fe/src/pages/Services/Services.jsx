@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Plus, Power, Settings, ShieldCheck, Layers, X, BookOpenCheck } from 'lucide-react';
+import { Plus, Power, Settings, ShieldCheck, Layers, X, Workflow } from 'lucide-react';
 import './Services.css';
 
 export default function Services() {
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Modal state
   const [showModal, setShowModal] = useState(false);
   const [newService, setNewService] = useState({ name: '', code: '', authMethod: 'NONE' });
@@ -25,17 +25,17 @@ export default function Services() {
         'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
       }
     })
-    .then(res => res.json())
-    .then(data => {
-      if (data.err === 200) {
-        setServices(data.data || []);
-      }
-      setLoading(false);
-    })
-    .catch(err => {
-      console.error(err);
-      setLoading(false);
-    });
+      .then(res => res.json())
+      .then(data => {
+        if (data.err === 200) {
+          setServices(data.data || []);
+        }
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error(err);
+        setLoading(false);
+      });
   };
 
   const openEditModal = (service) => {
@@ -59,7 +59,7 @@ export default function Services() {
       alert("Vui lòng điền đủ Tên và Mã Dịch Vụ!");
       return;
     }
-    
+
     setCreateLoading(true);
     const endpoint = editingServiceId ? '/admin/services/update' : '/admin/services/create';
     const payload = editingServiceId ? { ...newService, serviceId: editingServiceId } : newService;
@@ -72,23 +72,23 @@ export default function Services() {
       },
       body: JSON.stringify(payload)
     })
-    .then(res => res.json())
-    .then(data => {
-      if (data.err !== 200) {
-        alert(data.message || 'Có lỗi xảy ra');
-      } else {
-        setShowModal(false);
-        setNewService({ name: '', code: '', authMethod: 'NONE' });
-        setEditingServiceId(null);
-        fetchServices(); // Refresh list
-      }
-      setCreateLoading(false);
-    })
-    .catch(err => {
-      console.error(err);
-      alert('Lỗi kết nối');
-      setCreateLoading(false);
-    });
+      .then(res => res.json())
+      .then(data => {
+        if (data.err !== 200) {
+          alert(data.message || 'Có lỗi xảy ra');
+        } else {
+          setShowModal(false);
+          setNewService({ name: '', code: '', authMethod: 'NONE' });
+          setEditingServiceId(null);
+          fetchServices(); // Refresh list
+        }
+        setCreateLoading(false);
+      })
+      .catch(err => {
+        console.error(err);
+        alert('Lỗi kết nối');
+        setCreateLoading(false);
+      });
   };
 
   const toggleStatus = (id) => {
@@ -100,19 +100,19 @@ export default function Services() {
       },
       body: JSON.stringify({ serviceId: id })
     })
-    .then(res => res.json())
-    .then(data => {
-      if (data.err === 200) {
-        // Update local state directly to reflect DB
-        setServices(services.map(s => {
-          if (s.id === id) {
-            return { ...s, status: data.data.status };
-          }
-          return s;
-        }));
-      }
-    })
-    .catch(err => console.error(err));
+      .then(res => res.json())
+      .then(data => {
+        if (data.err === 200) {
+          // Update local state directly to reflect DB
+          setServices(services.map(s => {
+            if (s.id === id) {
+              return { ...s, status: data.data.status };
+            }
+            return s;
+          }));
+        }
+      })
+      .catch(err => console.error(err));
   };
 
   return (
@@ -159,7 +159,7 @@ export default function Services() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan="6" className="text-center" style={{padding: '2rem'}}>Đang tải dữ liệu...</td></tr>
+              <tr><td colSpan="6" className="text-center" style={{ padding: '2rem' }}>Đang tải dữ liệu...</td></tr>
             ) : services.map(service => (
               <tr key={service.id}>
                 <td className="text-muted">#{service.id}</td>
@@ -176,35 +176,35 @@ export default function Services() {
                 </td>
                 <td>
                   <div className="action-buttons">
-                    <button 
+                    <button
                       className={`toggle-btn ${service.status === 'active' ? 'on' : 'off'}`}
                       onClick={() => toggleStatus(service.id)}
                       title={service.status === 'active' ? 'Tắt dịch vụ' : 'Bật dịch vụ'}
                     >
                       <div className="toggle-slider"></div>
                     </button>
-                    <button 
-                      className="icon-btn-sm" 
+                    <button
+                      className="icon-btn-sm"
                       title="Sửa thông tin dịch vụ"
                       onClick={() => openEditModal(service)}
                       style={{ marginRight: '0.25rem' }}
                     >
                       <Settings size={18} style={{ color: 'var(--text-secondary)' }} />
                     </button>
-                    <button 
-                      className="icon-btn-sm" 
-                      title="Cấu hình luồng giao dịch (Transaction Design)"
+                    <button
+                      className="icon-btn-sm"
+                      title="Transaction Design"
                       onClick={() => window.location.href = `/dashboard/services/${service.id}/design`}
                       style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.3rem 0.6rem', background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.4)', borderRadius: '0.4rem', color: '#a5b4fc', fontSize: '0.8rem', fontWeight: 600 }}
                     >
-                      <BookOpenCheck size={16} /> Cấu hình Luồng
+                      <Workflow size={20} />
                     </button>
                   </div>
                 </td>
               </tr>
             ))}
             {(!loading && services.length === 0) && (
-              <tr><td colSpan="6" className="text-center" style={{padding: '2rem'}}>Chưa có dịch vụ nào.</td></tr>
+              <tr><td colSpan="6" className="text-center" style={{ padding: '2rem' }}>Chưa có dịch vụ nào.</td></tr>
             )}
           </tbody>
         </table>
@@ -222,40 +222,40 @@ export default function Services() {
             </div>
             <div className="modal-body">
               <p className="modal-desc">
-                {editingServiceId 
-                  ? 'Thay đổi thông tin cơ bản của dịch vụ.' 
+                {editingServiceId
+                  ? 'Thay đổi thông tin cơ bản của dịch vụ.'
                   : 'Khởi tạo một nghiệp vụ mới. Sau khi tạo, bạn cần vào phần Cấu hình luồng (Transaction Design) để thiết lập chi tiết.'}
               </p>
-              
+
               <div className="form-group">
                 <label>Tên Dịch Vụ (Hiển thị cho User)</label>
-                <input 
-                  type="text" 
-                  className="form-input w-full" 
+                <input
+                  type="text"
+                  className="form-input w-full"
                   placeholder="VD: Nạp tiền từ thẻ ATM"
                   value={newService.name}
-                  onChange={(e) => setNewService({...newService, name: e.target.value})}
+                  onChange={(e) => setNewService({ ...newService, name: e.target.value })}
                 />
               </div>
 
               <div className="form-group">
                 <label>Mã Nghiệp Vụ (Service Code)</label>
-                <input 
-                  type="text" 
-                  className="form-input w-full" 
+                <input
+                  type="text"
+                  className="form-input w-full"
                   placeholder="VD: CASH_IN_ATM"
                   value={newService.code}
-                  onChange={(e) => setNewService({...newService, code: e.target.value.toUpperCase()})}
+                  onChange={(e) => setNewService({ ...newService, code: e.target.value.toUpperCase() })}
                 />
                 <span className="input-hint">Mã viết hoa, không dấu, không khoảng trắng. {editingServiceId && 'Lưu ý: Đổi mã có thể ảnh hưởng đến client đang gọi API!'}</span>
               </div>
 
               <div className="form-group">
                 <label>Yêu cầu Xác thực (Auth Method)</label>
-                <select 
+                <select
                   className="form-input w-full"
                   value={newService.authMethod}
-                  onChange={(e) => setNewService({...newService, authMethod: e.target.value})}
+                  onChange={(e) => setNewService({ ...newService, authMethod: e.target.value })}
                 >
                   <option value="NONE">Không yêu cầu (NONE) - Dành cho Officer</option>
                   <option value="PIN">Yêu cầu mã PIN - Dành cho Khách hàng</option>

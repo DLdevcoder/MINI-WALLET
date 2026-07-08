@@ -10,8 +10,15 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .page-header {
@@ -56,9 +63,17 @@
   color: white;
 }
 
-.bg-blue { background: linear-gradient(135deg, #3b82f6, #2563eb); }
-.bg-green { background: linear-gradient(135deg, #10b981, #059669); }
-.bg-purple { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
+.bg-blue {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+
+.bg-green {
+  background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.bg-purple {
+  background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+}
 
 .stat-info {
   display: flex;
@@ -82,7 +97,8 @@
 .table-container {
   overflow-x: auto;
   border-radius: 12px;
-  padding: 1px; /* border gradient illusion */
+  padding: 1px;
+  /* border gradient illusion */
 }
 
 .custom-table {
@@ -154,14 +170,22 @@
   border-radius: 50%;
 }
 
-.status-badge.active { color: var(--success); }
-.status-badge.active .status-dot { 
-  background-color: var(--success); 
+.status-badge.active {
+  color: var(--success);
+}
+
+.status-badge.active .status-dot {
+  background-color: var(--success);
   box-shadow: 0 0 8px var(--success);
 }
 
-.status-badge.inactive { color: var(--text-muted); }
-.status-badge.inactive .status-dot { background-color: var(--text-muted); }
+.status-badge.inactive {
+  color: var(--text-muted);
+}
+
+.status-badge.inactive .status-dot {
+  background-color: var(--text-muted);
+}
 
 /* Buttons in Table */
 .action-buttons {
@@ -220,7 +244,7 @@
   top: 2px;
   left: 2px;
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .toggle-btn.on .toggle-slider {
@@ -228,11 +252,25 @@
 }
 
 /* Utility classes */
-.text-right { text-align: right; }
-.text-center { text-align: center; }
-.text-muted { color: var(--text-muted); }
-.font-medium { font-weight: 500; }
-.w-full { width: 100%; }
+.text-right {
+  text-align: right;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-muted {
+  color: var(--text-muted);
+}
+
+.font-medium {
+  font-weight: 500;
+}
+
+.w-full {
+  width: 100%;
+}
 
 /* Modal Styles */
 .modal-overlay {

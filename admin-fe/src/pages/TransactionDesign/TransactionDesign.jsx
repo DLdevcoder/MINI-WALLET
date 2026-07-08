@@ -187,14 +187,14 @@ export default function TransactionDesign() {
   return (
     <div className="tx-design-page fade-in">
       <div className="page-header">
-        <div className="header-left">
-          <button className="icon-btn-sm" onClick={() => navigate('/dashboard/services')}>
-            <ArrowLeft size={20} />
-          </button>
-          <div>
-            <h2 className="page-title">Transaction Design: <span style={{ color: '#a5b4fc' }}>{serviceInfo.name || 'Loading...'}</span> <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>({serviceInfo.code})</span></h2>
-            <p className="page-desc">Thiết lập luồng nghiệp vụ</p>
+        <div className="header-left" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '0.25rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <button className="icon-btn-sm" onClick={() => navigate('/dashboard/services')} style={{ margin: 0 }}>
+              <ArrowLeft size={20} />
+            </button>
+            <h2 className="page-title" style={{ margin: 0 }}>Transaction Design: <span style={{ color: '#a5b4fc' }}>{serviceInfo.name || 'Loading...'}</span> <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>({serviceInfo.code})</span></h2>
           </div>
+          <p className="page-desc" style={{ margin: 0, paddingLeft: '2.75rem' }}>Thiết lập luồng nghiệp vụ</p>
         </div>
         <div className="header-right" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           {saveMsg && <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>{saveMsg}</span>}
