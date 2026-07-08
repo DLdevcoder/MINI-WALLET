@@ -76,8 +76,8 @@
       ],
       "transValidation": [
         {
-          "funcName": "checkBalance",
-          "fields": "SENDERID:AMOUNT"
+          "valType": "balance_check",
+          "errorCode": "E01"
         }
       ],
       "glSteps": [
@@ -152,8 +152,8 @@
       ],
       "transValidation": [
         {
-          "funcName": "checkBalance",
-          "fields": "SENDERID:AMOUNT"
+          "valType": "balance_check",
+          "errorCode": "E01"
         }
       ],
       "glSteps": [
@@ -228,8 +228,8 @@
       ],
       "transValidation": [
         {
-          "funcName": "checkBankBalance",
-          "fields": "SENDERID:AMOUNT"
+          "valType": "balance_check",
+          "errorCode": "E01"
         }
       ],
       "glSteps": [

@@ -76,8 +76,8 @@ module.exports.bootstrap = async function (cb) {
           if (srv.transValidation && srv.transValidation.length > 0) {
             const transVals = srv.transValidation.map((tv, index) => ({
               service: createdService.id,
-              validateFunc: tv.funcName,
-              validateFields: tv.fields,
+              valType: tv.valType || 'balance_check',
+              errorCode: tv.errorCode || 'E01',
               order: index + 1
             }));
             await TransValidation.createEach(transVals);
