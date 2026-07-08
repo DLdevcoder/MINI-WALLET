@@ -141,3 +141,18 @@ body {
   border-radius: 1rem;
   box-shadow: var(--shadow-xl);
 }
+
+/* Responsive Tables */
+.table-container {
+  overflow-x: auto;
+  width: 100%;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+th, td {
+  padding: 1rem;
+  text-align: left;
+}
+

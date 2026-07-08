@@ -613,3 +613,74 @@ select.form-input option {
   flex-shrink: 0;
 }
 
+
+/* Mobile Responsive adjustments for Transaction Design */
+@media (max-width: 1024px) {
+  .tx-design-layout {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  
+  .tx-sidebar {
+    width: 100%;
+    padding: 1rem;
+    flex-shrink: 1;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .tabs-container {
+    flex-direction: row;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+  }
+
+  .tab-btn {
+    white-space: nowrap;
+    padding: 0.75rem 1rem;
+  }
+  
+  .tab-btn > div:nth-child(2) {
+    display: none;
+  }
+
+  .tab-check {
+    position: static;
+    margin-left: 0.5rem;
+  }
+  
+  .tx-workspace {
+    padding: 1.5rem 1rem;
+    overflow-y: visible;
+  }
+  
+  .input-group-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .builder-row {
+    flex-direction: column;
+  }
+  
+  .ledger-flow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .flow-arrow {
+    transform: rotate(90deg);
+    align-self: center;
+  }
+  
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .header-right {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+

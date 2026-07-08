@@ -79,7 +79,21 @@ export default function Layout() {
 
       {/* Main Content Area */}
       <div className="main-content">
-
+        {/* Topbar for mobile menu toggle */}
+        <div className="topbar">
+          <div className="topbar-left">
+            <button className="menu-btn" onClick={() => setSidebarOpen(true)}>
+              <Menu size={24} />
+            </button>
+            <h2 className="page-title">{currentPathName}</h2>
+          </div>
+          <div className="topbar-right">
+             <div className="user-profile">
+               <div className="avatar">A</div>
+               <span className="user-name">Admin</span>
+             </div>
+          </div>
+        </div>
 
         {/* Dynamic Page Content */}
         <main className="page-content">
