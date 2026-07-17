@@ -8,7 +8,7 @@ export default function Services() {
 
   // Modal state
   const [showModal, setShowModal] = useState(false);
-  const [newService, setNewService] = useState({ name: '', code: '', authMethod: 'NONE' });
+  const [newService, setNewService] = useState({ name: '', code: '', authMethod: 'NONE', baseTemplate: 'SINGLE' });
   const [editingServiceId, setEditingServiceId] = useState(null);
   const [createLoading, setCreateLoading] = useState(false);
 
@@ -43,14 +43,15 @@ export default function Services() {
     setNewService({
       name: service.name,
       code: service.code,
-      authMethod: service.auth?.method || 'NONE'
+      authMethod: service.auth?.method || 'NONE',
+      baseTemplate: service.baseTemplate || 'SINGLE'
     });
     setShowModal(true);
   };
 
   const openCreateModal = () => {
     setEditingServiceId(null);
-    setNewService({ name: '', code: '', authMethod: 'NONE' });
+    setNewService({ name: '', code: '', authMethod: 'NONE', baseTemplate: 'SINGLE' });
     setShowModal(true);
   };
 
@@ -78,7 +79,7 @@ export default function Services() {
           alert(data.message || 'Có lỗi xảy ra');
         } else {
           setShowModal(false);
-          setNewService({ name: '', code: '', authMethod: 'NONE' });
+          setNewService({ name: '', code: '', authMethod: 'NONE', baseTemplate: 'SINGLE' });
           setEditingServiceId(null);
           fetchServices(); // Refresh list
         }
@@ -164,7 +165,12 @@ export default function Services() {
               <tr key={service.id}>
                 <td className="text-muted">#{service.id}</td>
                 <td><span className="badge badge-code">{service.code}</span></td>
-                <td className="font-medium">{service.name}</td>
+                <td className="font-medium">
+                  {service.name}
+                  {service.baseTemplate === 'BATCH' && (
+                    <span className="badge badge-gray" style={{ marginLeft: '0.5rem', fontSize: '0.65rem' }}>BATCH</span>
+                  )}
+                </td>
                 <td>
                   <span className="badge badge-gray">{service.auth?.method || 'NONE'}</span>
                 </td>
@@ -248,6 +254,18 @@ export default function Services() {
                   onChange={(e) => setNewService({ ...newService, code: e.target.value.toUpperCase() })}
                 />
                 <span className="input-hint">Mã viết hoa, không dấu, không khoảng trắng. {editingServiceId && 'Lưu ý: Đổi mã có thể ảnh hưởng đến client đang gọi API!'}</span>
+              </div>
+
+              <div className="form-group">
+                <label>Loại Nghiệp Vụ (Base Template)</label>
+                <select
+                  className="form-input w-full"
+                  value={newService.baseTemplate}
+                  onChange={(e) => setNewService({ ...newService, baseTemplate: e.target.value })}
+                >
+                  <option value="SINGLE">Giao dịch thường (SINGLE - 1 gửi 1 nhận)</option>
+                  <option value="BATCH">Giao dịch lô (BATCH - 1 gửi N nhận)</option>
+                </select>
               </div>
 
               <div className="form-group">

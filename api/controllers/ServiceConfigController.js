@@ -10,13 +10,14 @@ module.exports = {
 
   createService: async function (req, res) {
     try {
-      const { code, name, authMethod } = req.body;
+      const { code, name, authMethod, baseTemplate } = req.body;
       if (!code || !name) return res.badRequest({ message: 'Thiếu mã hoặc tên dịch vụ' });
 
       // Create service
       const newService = await Service.create({
         code: code,
         name: name,
+        baseTemplate: baseTemplate || 'SINGLE',
         auth: { method: authMethod || 'NONE' },
         status: 'inactive' // Tạm tắt đến khi cấu hình xong
       });
@@ -48,13 +49,14 @@ module.exports = {
 
   updateService: async function (req, res) {
     try {
-      const { serviceId, code, name, authMethod } = req.body;
+      const { serviceId, code, name, authMethod, baseTemplate } = req.body;
       if (!serviceId) return res.badRequest({ message: 'Thiếu serviceId' });
       
       const updateData = {};
       if (code) updateData.code = code;
       if (name) updateData.name = name;
       if (authMethod) updateData.auth = { method: authMethod };
+      if (baseTemplate) updateData.baseTemplate = baseTemplate;
 
       const updated = await Service.update({ id: serviceId }, updateData);
       if (!updated || updated.length === 0) return res.badRequest({ message: 'Không tìm thấy service' });

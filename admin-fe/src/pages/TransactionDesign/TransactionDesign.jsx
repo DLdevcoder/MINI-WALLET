@@ -238,6 +238,13 @@ export default function TransactionDesign() {
           {activeTab === 'transField' && (
             <div className="workspace-section fade-in">
               <h3>1. Khai báo Input (Dữ liệu khách hàng nhập)</h3>
+              {serviceInfo.baseTemplate === 'BATCH' ? (
+                <div className="info-box warn-box" style={{ marginTop: '1rem' }}>
+                  <ShieldAlert size={18} style={{ color: '#ef4444' }} />
+                  <span style={{ color: '#fca5a5' }}><b>Bị khóa:</b> Dịch vụ Lô (BATCH) sử dụng định dạng payload cố định, không thể tùy chỉnh trường Input.</span>
+                </div>
+              ) : (
+                <>
               <div className="info-box">
                 <Info size={16} />
                 <span>Khai báo những gì khách hàng cần nhập khi sử dụng dịch vụ. Engine sẽ validate các trường này trước khi xử lý.</span>
@@ -352,6 +359,8 @@ export default function TransactionDesign() {
                   {transFields.length === 0 && <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '1rem' }}>Chưa có trường Input nào. Bấm "Thêm Trường".</p>}
                 </div>
               </div>
+                </>
+              )}
             </div>
           )}
 
@@ -359,6 +368,13 @@ export default function TransactionDesign() {
           {activeTab === 'fieldBuilder' && (
             <div className="workspace-section fade-in">
               <h3>2. Nguồn Dữ Liệu Ngầm (FieldBuilder)</h3>
+              {serviceInfo.baseTemplate === 'BATCH' ? (
+                <div className="info-box warn-box" style={{ marginTop: '1rem' }}>
+                  <ShieldAlert size={18} style={{ color: '#ef4444' }} />
+                  <span style={{ color: '#fca5a5' }}><b>Bị khóa:</b> Trường dữ liệu ngầm của Dịch vụ Lô (BATCH) được tự động tối ưu hóa nên không thể chỉnh sửa.</span>
+                </div>
+              ) : (
+                <>
               <div className="info-box">
                 <Info size={16} />
                 <span>Hệ thống tự động tra cứu thêm thông tin cần thiết từ DB (VD: từ SĐT → tra ra ID ví người nhận). Kết quả được lưu vào <b>TRANSBODY</b> để dùng ở Bước 5.</span>
@@ -466,6 +482,8 @@ export default function TransactionDesign() {
                   <span>Các biến sẽ có trong TRANSBODY: {transbodyVars.map(v => <code key={v} style={{ background: 'rgba(165,180,252,0.15)', padding: '0 4px', borderRadius: 4, margin: '0 2px' }}>{v}</code>)}</span>
                 </div>
               )}
+                </>
+              )}
             </div>
           )}
 
@@ -473,6 +491,13 @@ export default function TransactionDesign() {
           {activeTab === 'transValidation' && (
             <div className="workspace-section fade-in">
               <h3>3. Điều Kiện Chặn (Luật Nghiệp Vụ)</h3>
+              {serviceInfo.baseTemplate === 'BATCH' ? (
+                <div className="info-box warn-box" style={{ marginTop: '1rem' }}>
+                  <ShieldAlert size={18} style={{ color: '#ef4444' }} />
+                  <span style={{ color: '#fca5a5' }}><b>Bị khóa:</b> Điều kiện chặn của Dịch vụ Lô (BATCH) được xử lý độc lập cho từng giao dịch con bởi Batch Engine (số dư tổng, trạng thái ví) nên không thể tùy chỉnh.</span>
+                </div>
+              ) : (
+                <>
               <div className="info-box">
                 <Info size={16} />
                 <span>Giao dịch sẽ bị <b>từ chối</b> nếu vi phạm bất kỳ điều kiện nào dưới đây. Các kiểm tra này chạy TRƯỚC khi tiền bị trừ.</span>
@@ -520,6 +545,8 @@ export default function TransactionDesign() {
                   {transValidations.length === 0 && <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '1rem' }}>Chưa có điều kiện nào.</p>}
                 </div>
               </div>
+                </>
+              )}
             </div>
           )}
 
@@ -585,6 +612,13 @@ export default function TransactionDesign() {
           {activeTab === 'transDefinition' && (
             <div className="workspace-section fade-in">
               <h3>5. Luồng Dòng Tiền (Ghi Sổ Kép)</h3>
+              {serviceInfo.baseTemplate === 'BATCH' ? (
+                <div className="info-box warn-box" style={{ marginTop: '1rem' }}>
+                  <ShieldAlert size={18} style={{ color: '#ef4444' }} />
+                  <span style={{ color: '#fca5a5' }}><b>Bị khóa:</b> Bút toán của Dịch vụ Lô (BATCH) được xử lý gom tổng tự động bởi Batch Engine để tránh nghẽn ví (Hot Document), do đó không thể chỉnh sửa bằng tay.</span>
+                </div>
+              ) : (
+                <>
               <div className="info-box">
                 <Info size={16} />
                 <span>Định nghĩa đường đi của tiền. Mỗi bước là một bút toán: <b>trừ một ví</b> và <b>cộng một ví khác</b> với cùng số tiền. Tiền chỉ dịch chuyển, không mất đi.</span>
@@ -704,6 +738,8 @@ export default function TransactionDesign() {
                 ))}
                 {glSteps.length === 0 && <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '1.5rem' }}>Chưa có bước dời tiền nào. Bấm "Thêm Bước Dời Tiền".</p>}
               </div>
+                </>
+              )}
             </div>
           )}
 

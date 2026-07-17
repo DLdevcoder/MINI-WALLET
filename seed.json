@@ -242,6 +242,44 @@
           "creditTarget": "RECEIVERID"
         }
       ]
+    },
+    {
+      "code": "BATCH_PAYOUT",
+      "name": "Chuyển tiền theo lô (Batch Payout)",
+      "baseTemplate": "BATCH",
+      "action": "none",
+      "auth": {
+        "method": "PIN"
+      },
+      "fee": {
+        "type": "fixed",
+        "value": 0
+      },
+      "fieldBuilder": [
+        {
+          "order": 1,
+          "name": "SENDERID",
+          "rule": "mapping",
+          "source": "ctx.senderId"
+        }
+      ],
+      "transField": [],
+      "transValidation": [
+        {
+          "valType": "balance_check",
+          "errorCode": "E01"
+        }
+      ],
+      "glSteps": [
+        {
+          "order": 1,
+          "amount": "AMOUNT",
+          "debitLevel": "role",
+          "debitTarget": "SENDERID",
+          "creditLevel": "role",
+          "creditTarget": "RECEIVERID"
+        }
+      ]
     }
   ]
 }

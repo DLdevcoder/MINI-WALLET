@@ -3,6 +3,7 @@ module.exports = {
     attributes: {
         code: { type: 'string', required: true, unique: true },
         name: { type: 'string', required: true },
+        baseTemplate: { type: 'string', enum: ['SINGLE', 'BATCH'], defaultsTo: 'SINGLE' },
         fieldBuilder: { type: 'json' },
         amountFormula: { type: 'string' },
         action: { type: 'string', enum: ['none', 'billerTrans'], defaultsTo: 'none' },

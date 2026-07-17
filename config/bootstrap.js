@@ -98,10 +98,11 @@ module.exports.bootstrap = async function (cb) {
 
           console.log(`Đã tạo service: ${srv.code}`);
         } else {
-          // Cập nhật fieldBuilder nếu đã thay đổi trong seed.json
+          // Cập nhật fieldBuilder, action, baseTemplate nếu đã thay đổi trong seed.json
           await Service.update({ code: srv.code }, {
             fieldBuilder: srv.fieldBuilder,
-            action: srv.action
+            action: srv.action,
+            baseTemplate: srv.baseTemplate || 'SINGLE'
           });
           console.log(`Đã cập nhật fieldBuilder của service: ${srv.code}`);
         }

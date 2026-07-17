@@ -13,7 +13,8 @@ module.exports = {
         let transRefId = 'BATCH' + Date.now() + Math.floor(1000 + Math.random() * 9000);
 
         try {
-            const { pin, transactions } = req.body;
+            const { pin, transactions, serviceCode } = req.body;
+            const codeToRun = serviceCode || 'BATCH_PAYOUT';
 
             if (!transactions || !Array.isArray(transactions) || transactions.length === 0) {
                 return res.error(RespCode.INVALID_PARAMS);
@@ -57,8 +58,19 @@ module.exports = {
                 await Customer.update({ id: customer.id }, { failedPinAttempts: 0 });
             }
 
+            // 1. Lấy thông tin service
+            const batchService = await Service.findOne({ code: codeToRun });
+            if (!batchService || batchService.status !== 'active') {
+                return res.error(RespCode.SERVICE_UNAVAILABLE);
+            }
+            if (batchService.baseTemplate !== 'BATCH') {
+                return res.error(RespCode.INVALID_PARAMS, 'Dịch vụ này không hỗ trợ chuyển lô (Batch Payout)');
+            }
+            const serviceId = batchService.id;
+
             // 2. Validate dữ liệu & Tra cứu ví nhận
             let totalAmount = 0;
+            let totalFee = 0;
             const validTransactions = [];
 
             for (const t of transactions) {
@@ -70,12 +82,26 @@ module.exports = {
                 // Tra cứu receiver
                 const receiver = await Customer.findOne({ phone: String(t.receiverPhone) });
                 if (receiver && String(receiver.pocket) !== String(merchantPocketId)) {
+                    
+                    // Tính phí cho giao dịch này dựa trên cấu hình service
+                    let fee = 0;
+                    if (batchService.fee) {
+                        if (batchService.fee.type === 'fixed') {
+                            fee = batchService.fee.value || 0;
+                        } else if (batchService.fee.type === 'percent') {
+                            fee = amt * (batchService.fee.value / 100);
+                            if (batchService.fee.max && fee > batchService.fee.max) fee = batchService.fee.max;
+                        }
+                    }
+
                     validTransactions.push({
                         receiverPhone: t.receiverPhone,
                         receiverPocket: receiver.pocket,
-                        amount: amt
+                        amount: amt,
+                        fee: fee
                     });
-                    totalAmount += amt;
+                    totalAmount += (amt + fee);
+                    totalFee += fee;
                 }
             }
 
@@ -116,8 +142,23 @@ module.exports = {
                 amount: totalAmount,
                 status: 'settled'
             });
-            let p2pService = await Service.findOne({ code: 'P2P_TRANSFER' });
-            let serviceId = p2pService ? p2pService.id : null;
+
+            // Ghi nhận phí hệ thống (nếu có)
+            if (totalFee > 0) {
+                let sysFeePocket = await Pocket.findOne({ ownerLevel: 'SYSTEM_FEE' });
+                if (sysFeePocket) {
+                    await PocketService.updatePocketBalance(sysFeePocket.id, totalFee);
+                    await PocketEntry.create({
+                        transRefId: transRefId,
+                        stepOrder: 0,
+                        debit: null,
+                        credit: sysFeePocket.id,
+                        amount: totalFee,
+                        status: 'settled',
+                        note: 'Thu phí hệ thống'
+                    });
+                }
+            }
 
             // 6. Cộng tiền hàng loạt cho Receiver
             const successRecords = [];
@@ -132,12 +173,12 @@ module.exports = {
                         sender: merchantPocketId,
                         receiver: t.receiverPocket,
                         amount: t.amount,
-                        fee: 0,
-                        totalAmount: t.amount,
+                        fee: t.fee,
+                        totalAmount: t.amount + t.fee,
                         status: 'done'
                     });
 
-                    // Cộng tiền cho Receiver
+                    // Cộng tiền cho Receiver (gốc)
                     await PocketService.updatePocketBalance(t.receiverPocket, t.amount);
 
                     // Bút toán credit: merchant → receiver (từng dòng rõ ràng)
@@ -164,10 +205,12 @@ module.exports = {
             await TransactionTrail.create({
                 transRefId: transRefId,
                 inputMessage: {
-                    type: 'BATCH_PAYOUT',
+                    serviceCode: codeToRun,
+                    type: codeToRun,
                     totalCount: validTransactions.length,
                     successCount: successRecords.length,
-                    totalAmount: totalAmount
+                    totalAmount: totalAmount,
+                    fee: totalFee
                 },
                 status: 'done'
             });
