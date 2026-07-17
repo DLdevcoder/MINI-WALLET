@@ -156,9 +156,11 @@ export default function TransactionDesign() {
   };
 
   const updateBuilder = (idx, key, val) => {
-    const updated = [...fieldBuilders];
-    updated[idx] = { ...updated[idx], [key]: val };
-    setFieldBuilders(updated);
+    setFieldBuilders(prev => {
+      const updated = [...prev];
+      updated[idx] = { ...updated[idx], [key]: val };
+      return updated;
+    });
   };
 
   const addGlStep = () => {
@@ -174,9 +176,11 @@ export default function TransactionDesign() {
   };
 
   const updateGlStep = (idx, key, val) => {
-    const updated = [...glSteps];
-    updated[idx] = { ...updated[idx], [key]: val };
-    setGlSteps(updated);
+    setGlSteps(prev => {
+      const updated = [...prev];
+      updated[idx] = { ...updated[idx], [key]: val };
+      return updated;
+    });
   };
 
   // Tất cả biến TRANSBODY hiện có (từ fieldBuilder)
@@ -669,13 +673,13 @@ export default function TransactionDesign() {
                       {/* DEBIT */}
                       <div className="pocket-box debit">
                         <div className="pocket-title">➖ Trừ tiền từ ví (Debit)</div>
-                        <select className="form-input" value={step.debitLevel || 'role'}
-                          onChange={(e) => { updateGlStep(idx, 'debitLevel', e.target.value); updateGlStep(idx, 'debitTarget', e.target.value === 'role' ? 'SENDERID' : (walletPockets[0]?.user || '')); }}
+                        <select className="form-input" value={step.debitLevel || 'productLevel'}
+                          onChange={(e) => { updateGlStep(idx, 'debitLevel', e.target.value); updateGlStep(idx, 'debitTarget', e.target.value === 'productLevel' ? 'SENDERID' : (walletPockets[0]?.user || '')); }}
                         >
-                          <option value="role">Ví động (lấy từ TRANSBODY)</option>
+                          <option value="productLevel">Ví động (lấy từ TRANSBODY)</option>
                           <option value="wallet">Ví cố định (System/Bank)</option>
                         </select>
-                        {step.debitLevel === 'role' ? (
+                        {step.debitLevel === 'productLevel' ? (
                           <select className="form-input" style={{ marginTop: '0.4rem' }} value={step.debitTarget || 'SENDERID'}
                             onChange={(e) => updateGlStep(idx, 'debitTarget', e.target.value)}
                           >
@@ -705,13 +709,13 @@ export default function TransactionDesign() {
                       {/* CREDIT */}
                       <div className="pocket-box credit">
                         <div className="pocket-title">➕ Cộng tiền vào ví (Credit)</div>
-                        <select className="form-input" value={step.creditLevel || 'role'}
-                          onChange={(e) => { updateGlStep(idx, 'creditLevel', e.target.value); updateGlStep(idx, 'creditTarget', e.target.value === 'role' ? 'RECEIVERID' : (walletPockets[0]?.user || '')); }}
+                        <select className="form-input" value={step.creditLevel || 'productLevel'}
+                          onChange={(e) => { updateGlStep(idx, 'creditLevel', e.target.value); updateGlStep(idx, 'creditTarget', e.target.value === 'productLevel' ? 'RECEIVERID' : (walletPockets[0]?.user || '')); }}
                         >
-                          <option value="role">Ví động (lấy từ TRANSBODY)</option>
+                          <option value="productLevel">Ví động (lấy từ TRANSBODY)</option>
                           <option value="wallet">Ví cố định (System/Bank)</option>
                         </select>
-                        {step.creditLevel === 'role' ? (
+                        {step.creditLevel === 'productLevel' ? (
                           <select className="form-input" style={{ marginTop: '0.4rem' }} value={step.creditTarget || 'RECEIVERID'}
                             onChange={(e) => updateGlStep(idx, 'creditTarget', e.target.value)}
                           >
